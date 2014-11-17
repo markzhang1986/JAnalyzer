@@ -180,9 +180,8 @@ public class Expr {
 				}			
 			}
 			
-			// ASSUMPTION: node:Scalar_String is always "text startline text endline text value text"
-			// ASSUMPTION: node:subNode:name is always "text scalar:string text"
-			Node stringValueNode = exprNode.getChildNodes().item(5).getChildNodes().item(1);
+			Node stringValueNode = DocUtils.GetFirstChildWithName(
+					DocUtils.GetFirstChildWithName(exprNode, "subNode:value"), "scalar:string");
 			
 			if (JAnalyzer.DEBUG_MODE >= 10) {
 				NodeList exprChildList = stringValueNode.getChildNodes();
@@ -214,8 +213,6 @@ public class Expr {
 				}			
 			}
 			
-			// ASSUMPTION: node:Expr_Variable is always "text startline text endline text name text"
-			// ASSUMPTION: node:subNode:name is always "text scalar:string text"
 			Node nameStringNode = DocUtils.GetFirstChildWithName(
 					DocUtils.GetFirstChildWithName(exprNode, "subNode:name"), "scalar:string");
 			
@@ -233,58 +230,11 @@ public class Expr {
 			SetExprType(ExprType.BOOL);
 			SetExprKind(ExprKind.COMP);
 			
-			// Debug information
-			if (JAnalyzer.DEBUG_MODE >= 10) {
-				NodeList exprChildList = exprNode.getChildNodes();
-				
-				System.out.println("\n[DEBUG]node:Expr_BinaryOp_Equal");
-				for (int i = 0; i < exprChildList.getLength(); i++) {
-					System.out.println("[DEBUG]   " + exprChildList.item(i).getNodeName());
-				}			
-			}
+			Node exprLeftNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:left");
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprLeftNode)));
 			
-			NodeList exprChildList = exprNode.getChildNodes();
-			
-			for (int i = 0; i < exprChildList.getLength(); i++) {
-				
-				Node ExprChildNode = exprChildList.item(i);
-				
-				
-				// ASSUMPTION: left is always before right
-				if (ExprChildNode.getNodeName().equals("subNode:left")) {
-					
-					// Debug information
-					if (JAnalyzer.DEBUG_MODE >= 10) {
-						NodeList printList = ExprChildNode.getChildNodes();
-						
-						System.out.println("\n[DEBUG]subNode:left");
-						for (int j = 0; j < printList.getLength(); j++) {
-							System.out.println("[DEBUG]   " + printList.item(j).getNodeName());
-						}			
-					}
-					
-					// ASSUMPTION: subNode:left is always "text, content, text"
-					Expr leftExpr = new Expr(ExprChildNode.getChildNodes().item(1));
-					subExprs.add(leftExpr);
-					
-	
-					
-				} else if (ExprChildNode.getNodeName().equals("subNode:right")) {
-					
-					subExprs.add(new Expr(ExprChildNode.getChildNodes().item(1)));	
-					
-				}
-				
-				// Skipping lines
-				else if (ExprChildNode.getNodeName().equals("#text") ||
-						ExprChildNode.getNodeName().equals("attribute:startLine") ||
-						ExprChildNode.getNodeName().equals("attribute:endLine")) {
-					
-					//System.out.println("\nSkipping: " + ExprChildNode.getNodeName());
-					
-				}
-					
-			}
+			Node exprRightNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:right");
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprRightNode)));
 			
 		}
 		
@@ -296,76 +246,11 @@ public class Expr {
 			SetExprType(ExprType.UNKOWN);
 			SetExprKind(ExprKind.COMP);
 			
-			// Debug information
-			if (JAnalyzer.DEBUG_MODE >= 10) {
-				NodeList printList = exprNode.getChildNodes();
-				
-				System.out.println("\n[DEBUG]node:Expr_ArrayDimFetch");
-				for (int j = 0; j < printList.getLength(); j++) {
-					System.out.println("[DEBUG]   " + printList.item(j).getNodeName());
-				}			
-			}
+			Node exprVarNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:var");
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprVarNode)));
 			
-			NodeList exprChildList = exprNode.getChildNodes();
-			
-			for (int i = 0; i < exprChildList.getLength(); i++) {
-				
-				Node ExprChildNode = exprChildList.item(i);
-				
-				
-				// ASSUMPTION: left is always before right
-				if (ExprChildNode.getNodeName().equals("subNode:var")) {
-					
-					// Debug information
-					if (JAnalyzer.DEBUG_MODE >= 10) {
-						NodeList printList = ExprChildNode.getChildNodes();
-						
-						System.out.println("\n[DEBUG]subNode:var");
-						for (int j = 0; j < printList.getLength(); j++) {
-							System.out.println("[DEBUG]   " + printList.item(j).getNodeName());
-						}			
-					}
-					
-					// ASSUMPTION: subNode:var is always "text, content, text"
-					Expr varExpr = new Expr(ExprChildNode.getChildNodes().item(1));
-					subExprs.add(varExpr);
-					
-	
-					
-				} else if (ExprChildNode.getNodeName().equals("subNode:dim")) {
-					
-					// Debug information
-					if (JAnalyzer.DEBUG_MODE >= 10) {
-						NodeList printList = ExprChildNode.getChildNodes();
-						
-						System.out.println("\n[DEBUG]subNode:dim");
-						for (int j = 0; j < printList.getLength(); j++) {
-							System.out.println("[DEBUG]   " + printList.item(j).getNodeName());
-						}			
-					}
-					
-					// ASSUMPTION: subNode:dim is always "text, content, text"
-					Expr dimExpr = new Expr(ExprChildNode.getChildNodes().item(1));
-					subExprs.add(dimExpr);
-					
-				}
-				
-				// Skipping lines
-				else if (ExprChildNode.getNodeName().equals("#text") ||
-						ExprChildNode.getNodeName().equals("attribute:startLine") ||
-						ExprChildNode.getNodeName().equals("attribute:endLine")) {
-					
-					//System.out.println("\nSkipping: " + ExprChildNode.getNodeName());
-					
-				}
-				
-				else {
-					
-					System.out.println("\nUnhandled node: " + ExprChildNode.getNodeName());
-					
-				}
-				
-			}	
+			Node exprDimNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:dim");
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprDimNode)));	
 			
 		}
 		

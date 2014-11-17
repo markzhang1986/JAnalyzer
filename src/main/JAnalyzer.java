@@ -2,9 +2,13 @@ package main;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
+
+import utils.DocUtils;
+
 import java.io.File;
 
 public class JAnalyzer {
@@ -31,8 +35,8 @@ public class JAnalyzer {
 	    	NodeList topList = root.getChildNodes();	    	    
 	    	 	
 	    	// Initialize the PhpFile
-	    	// ASSUMPTION: root always has "text content text"
-	    	PhpFile phpFile = new PhpFile(topList.item(1));
+	    	// ASSUMPTION: root always has a direct child "scalar:array" which contains a list of instructions
+	    	PhpFile phpFile = new PhpFile(DocUtils.GetFirstChildWithName(root, "scalar:array"));
 	    	
 	    	phpFile.printPhpFile();
 	    	
