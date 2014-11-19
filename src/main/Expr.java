@@ -14,8 +14,8 @@ public class Expr {
 	private String top;
 	private List<Expr> subExprs;
 
-	private ExprType exprType;
-	private ExprKind exprKind;
+	public ExprType exprType;
+	public ExprKind exprKind;
 	
 	public Expr() {
 		
@@ -261,6 +261,38 @@ public class Expr {
 			
 		}
 		
+		
+	}
+	
+	public List<String> GetVarsFromExpr() {
+		
+		List<String> varList = new ArrayList<String>();
+		
+		
+		// Add nothing if the expression is a constant
+		if (exprKind == ExprKind.CONS) {
+			
+		}
+		
+		// Add the variable if the expression is a variable
+		else if (exprKind == ExprKind.VAR) {
+			
+			varList.add(top);
+			
+		}
+		
+		// Add the variable if the expression is composite
+		else if (exprKind == ExprKind.COMP) {
+			
+			for (int i = 0; i < subExprs.size(); i++) {
+				
+				varList.addAll(subExprs.get(i).GetVarsFromExpr());
+				
+			}
+			
+		}
+		
+		return varList;
 		
 	}
 	

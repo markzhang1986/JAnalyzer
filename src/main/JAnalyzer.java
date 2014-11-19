@@ -35,7 +35,7 @@ public class JAnalyzer {
 	    	NodeList topList = root.getChildNodes();	    	    
 	    	 	
 	    	// Initialize the PhpFile
-	    	// ASSUMPTION: root always has a direct child "scalar:array" which contains a list of instructions
+	    	// ASSUMPTION: root always has a direct child "scalar:array" which contains a list of statements
 	    	PhpFile phpFile = new PhpFile(DocUtils.GetFirstChildWithName(root, "scalar:array"));
 	    	
 	    	phpFile.printPhpFile();

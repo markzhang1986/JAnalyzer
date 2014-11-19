@@ -8,47 +8,47 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Element;
 
 public class PhpFile {
-	private List<Instr> instrs;
+	private List<Stmt> stmts;
 	
 	public PhpFile () {
 		
-		instrs = new ArrayList<Instr>();
+		stmts = new ArrayList<Stmt>();
 		
 	}
 	
-	public PhpFile (List<Instr> new_instrs) {
+	public PhpFile (List<Stmt> new_stmts) {
 		
-		instrs = new_instrs;
+		stmts = new_stmts;
 		
 	}
 	
 	public PhpFile (Node root) throws Exception {
 		
-		instrs = new ArrayList<Instr>();
+		stmts = new ArrayList<Stmt>();
 		ReadFileFromRoot(root);
 		
 	}
 	
-	public void AddInstr (Instr newInstr) throws Exception {
+	public void AddStmt (Stmt newStmt) throws Exception {
 		
-		if (newInstr == null)
+		if (newStmt == null)
 		{
-			throw new Exception("Can't add null as instruction.");
+			throw new Exception("Can't add null as statement.");
 		}
 		
-		instrs.add(newInstr);
+		stmts.add(newStmt);
 		
 	}
 	
 	/**
-	 * Top level function when you read in a php file and parse it into a list of instructions and store them in this PhpFile object.
+	 * Top level function when you read in a php file and parse it into a list of statements and store them in this PhpFile object.
 	 * 
-	 * @param root The root of the dom elements containing all the instruction information
+	 * @param root The root of the dom elements containing all the statement information
 	 * @throws Exception 
 	 */
 	private void ReadFileFromRoot (Node root) throws Exception {
 		
-		instrs = Instr.ReadInstructionFromArray(root);
+		stmts = Stmt.ReadStmtsFromArray(root);
 		
 	}
 	
@@ -56,11 +56,11 @@ public class PhpFile {
 		
 		
 		//DEBUGGING
-		System.out.println("size of phpfile: " + instrs.size());
+		System.out.println("size of phpfile: " + stmts.size());
 		
-		for(int i = 0; i < instrs.size(); i++) {
+		for(int i = 0; i < stmts.size(); i++) {
 			
-			instrs.get(i).printInstr();
+			stmts.get(i).printStmt();
 			
 		}
 	}
