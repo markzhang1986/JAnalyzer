@@ -4,12 +4,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
 
 import utils.DocUtils;
 
 import java.io.File;
+import java.util.List;
 
 public class JAnalyzer {
 	
@@ -32,13 +32,24 @@ public class JAnalyzer {
 	    	
 	    	System.out.println("Root element :" + root.getNodeName());
 	    	
-	    	NodeList topList = root.getChildNodes();	    	    
+	    	//NodeList topList = root.getChildNodes();	    	    
 	    	 	
 	    	// Initialize the PhpFile
 	    	// ASSUMPTION: root always has a direct child "scalar:array" which contains a list of statements
 	    	PhpFile phpFile = new PhpFile(DocUtils.GetFirstChildWithName(root, "scalar:array"));
 	    	
 	    	phpFile.printPhpFile();
+	    	
+	    	/*
+	    	System.out.println("Assignment stmt:");
+	    	List<Stmt> assignStmts = phpFile.getAllAssignStmts();
+	    	for (int i = 0; i < assignStmts.size(); i++) {
+	    		
+	    		assignStmts.get(i).printStmt();
+	    		
+	    	}
+	    	*/
+	    	
 	    	
 	        
 	    } catch (Exception e) {

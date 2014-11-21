@@ -1,11 +1,7 @@
 package main;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-
-import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
-import org.w3c.dom.Element;
 
 public class PhpFile {
 	private List<Stmt> stmts;
@@ -52,8 +48,10 @@ public class PhpFile {
 		
 	}
 	
+	/**
+	 * Print out the php file
+	 */
 	public void printPhpFile() {
-		
 		
 		//DEBUGGING
 		System.out.println("size of phpfile: " + stmts.size());
@@ -63,6 +61,20 @@ public class PhpFile {
 			stmts.get(i).printStmt();
 			
 		}
+	}
+	
+	public List<Stmt> getAllAssignStmts() {
+		
+		List<Stmt> assignStmts = new ArrayList<Stmt>();
+		
+		for (int i = 0; i < stmts.size(); i++) {
+			
+			assignStmts.addAll(stmts.get(i).GetAllAssignStmt());
+			
+		}
+		
+		return assignStmts;
+		
 	}
 	
 

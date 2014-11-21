@@ -1,7 +1,6 @@
 package main;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.w3c.dom.Node;
@@ -17,16 +16,6 @@ public class Expr {
 	public ExprType exprType;
 	public ExprKind exprKind;
 	
-	public Expr() {
-		
-		SetTop("");
-		subExprs = new ArrayList<Expr>();
-		
-		SetExprType(ExprType.UNKOWN);
-		
-		
-	}
-	
 	public Expr(Node exprNode) throws Exception {
 		
 		subExprs = new ArrayList<Expr>();
@@ -39,7 +28,15 @@ public class Expr {
 		// Case variable
 		if (exprKind == ExprKind.VAR) {
 			
-			return "$" + top;
+			if (top == "@") {
+				
+				return "$" + subExprs.get(0).top + "[" + subExprs.get(1).top + "]";
+				
+			} else {
+				
+				return "$" + top;
+				
+			}
 			
 		}
 		
@@ -244,7 +241,7 @@ public class Expr {
 			// A@B get the item B in array A
 			SetTop("@");
 			SetExprType(ExprType.UNKOWN);
-			SetExprKind(ExprKind.COMP);
+			SetExprKind(ExprKind.VAR);
 			
 			Node exprVarNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:var");
 			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprVarNode)));
@@ -277,8 +274,21 @@ public class Expr {
 		// Add the variable if the expression is a variable
 		else if (exprKind == ExprKind.VAR) {
 			
-			varList.add(top);
+			// If it's an element from an array
+			if (top.equals("@")) {
+				
+				String varName = subExprs.get(0).top;
+				String idxName = subExprs.get(1).top;
+				varList.add(varName + "[" + idxName + "]");
+				
+			} 
 			
+			// If it's an simple variable
+			else {
+				
+				varList.add(top);
+				
+			}
 		}
 		
 		// Add the variable if the expression is composite

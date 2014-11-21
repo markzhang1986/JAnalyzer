@@ -18,13 +18,29 @@ public class DocUtils {
 		
 		if (!stringNode.getNodeName().equals("scalar:string")) {
 			
-			throw new Exception("[ERROR]DocUtils.GetStringFromNode doesn't take " + stringNode.getNodeName());
+			throw new Exception("DocUtils.GetStringFromNode doesn't take " + stringNode.getNodeName());
 			
 		} 
 		
 		else {
 
 			return stringNode.getTextContent();
+			
+		}
+		
+	}
+	
+	static public String GetIntFromNode(Node intNode) throws Exception {
+		
+		if (!intNode.getNodeName().equals("scalar:int")) {
+			
+			throw new Exception("DocUtils.GetIntFromNode doesn't take " + intNode.getNodeName());
+			
+		}
+		
+		else {
+			
+			return intNode.getTextContent();
 			
 		}
 		
