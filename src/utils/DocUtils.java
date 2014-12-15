@@ -30,7 +30,7 @@ public class DocUtils {
 		
 	}
 	
-	static public String GetIntFromNode(Node intNode) throws Exception {
+	static public int GetIntFromNode(Node intNode) throws Exception {
 		
 		if (!intNode.getNodeName().equals("scalar:int")) {
 			
@@ -40,7 +40,7 @@ public class DocUtils {
 		
 		else {
 			
-			return intNode.getTextContent();
+			return Integer.parseInt(intNode.getTextContent());
 			
 		}
 		

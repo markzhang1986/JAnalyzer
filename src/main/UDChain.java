@@ -10,8 +10,7 @@ public class UDChain {
 	public UDChain(PhpFile newFile, Stmt newTarget) throws Exception {
 		
 		SetPhpFile(newFile);
-		SetTarget(newTarget);
-		BuildUDChain();
+		SetTargetStmt(newTarget);
 		
 	}
 	
@@ -58,8 +57,6 @@ public class UDChain {
 	}
 	
 	private void BuildUDChain() {
-		
-		List<String> varList = GetTargetStmt().GetUseVars();
 		
 		
 	}

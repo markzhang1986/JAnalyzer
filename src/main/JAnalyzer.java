@@ -30,9 +30,7 @@ public class JAnalyzer {
 	    	
 	    	Element root = doc.getDocumentElement();
 	    	
-	    	System.out.println("Root element :" + root.getNodeName());
-	    	
-	    	//NodeList topList = root.getChildNodes();	    	    
+	    	//System.out.println("Root element :" + root.getNodeName());    
 	    	 	
 	    	// Initialize the PhpFile
 	    	// ASSUMPTION: root always has a direct child "scalar:array" which contains a list of statements
@@ -40,15 +38,8 @@ public class JAnalyzer {
 	    	
 	    	phpFile.printPhpFile();
 	    	
-	    	/*
-	    	System.out.println("Assignment stmt:");
-	    	List<Stmt> assignStmts = phpFile.getAllAssignStmts();
-	    	for (int i = 0; i < assignStmts.size(); i++) {
-	    		
-	    		assignStmts.get(i).printStmt();
-	    		
-	    	}
-	    	*/
+	    	VCGenerator generator = new VCGenerator(phpFile);
+	    	generator.GenerateVC();
 	    	
 	    	
 	        

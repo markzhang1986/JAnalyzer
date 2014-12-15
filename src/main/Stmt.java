@@ -27,7 +27,7 @@ public class Stmt {
 		exprs = new ArrayList<Expr>();
 		body1 = new ArrayList<Stmt>();
 		body1 = new ArrayList<Stmt>();
-		sliceTag = new ArrayList<Integer>();
+		sliceTags = new ArrayList<Integer>();
 		
 		ReadStmtFromNode(stmtNode);
 		
@@ -111,16 +111,16 @@ public class Stmt {
 			break;
 			
 		case ASSIGN:
-			System.out.println(exprs.get(0).toString() + ":= " + exprs.get(1).toString() + ";");
+			System.out.println(exprs.get(0).GetString(true) + ":= " + exprs.get(1).GetString(true) + ";");
 			break;
 			
 		case FUNC:
-			System.out.println("FUNC(" + exprs.get(0).toString() + ");");
+			System.out.println("FUNC(" + exprs.get(0).GetString(true) + ");");
 			break;
 			
 		case ITE:
 			
-			System.out.println("if (" + exprs.get(0).toString() + ") {");
+			System.out.println("if (" + exprs.get(0).GetString(true) + ") {");
 			System.out.println();
 			
 			for (int i = 0; i < body1.size(); i++){
@@ -139,7 +139,7 @@ public class Stmt {
 			break;
 			
 		case WHILE:
-			System.out.println("while (" + exprs.get(0).toString() + ") {");
+			System.out.println("while (" + exprs.get(0).GetString(true) + ") {");
 			System.out.println();
 			
 			for (int i = 0; i < body1.size(); i++){
@@ -334,41 +334,97 @@ public class Stmt {
 	//
 	
 	/**
-	 * Get the variables defined in this statement
+	 * Get the variables defined in this statement, not including the ones defined in sub statements.
 	 * @return a list of variables defined in this statement
 	 */
-	// FIXME: What happens if variables are defined in statements inside ITE or WHILE
-	public List<String> getDefVars() {
+	public List<String> GetDefVars(boolean withPosition) {
+		
+		List<String> retVars = new ArrayList<String>();
 		
 		// If it's an assignment, add every variable on the left side of the equation
 		if (stmtType == StmtType.ASSIGN) {
 			
-			return exprs.get(0).GetVarsFromExpr();
+			retVars.addAll(exprs.get(0).GetVarsFromExpr(withPosition));
 			
 		}
 		
-		// Else return null
+		// Else return empty list
 		else {
 			
-			return null;
+			// Add nothing
 			
 		}
+		
+		return retVars;
 		
 	}
 	
 	/**
-	 * Get the variables used in this statement
+	 * Get the variables defined in this statement recursively, including the ones defined in sub statements.
+	 * @return a list of variables defined in this statement
+	 */
+	public List<String> GetDefVarsRecur(boolean withPosition) {
+		
+		List<String> retVars = new ArrayList<String>();
+		
+		// If it's an assignment, add every variable on the left side of the equation
+		if (stmtType == StmtType.ASSIGN) {
+			
+			retVars = exprs.get(0).GetVarsFromExpr(withPosition);
+			
+		}
+		
+		else if (stmtType == StmtType.ITE) {
+			
+			for (int i = 0; i < body1.size(); i++) {
+				
+				retVars.addAll(body1.get(i).GetDefVarsRecur(withPosition));
+				
+			}
+			
+			for (int i = 0; i < body2.size(); i++) {
+				
+				retVars.addAll(body2.get(i).GetDefVarsRecur(withPosition));
+				
+			}
+			
+			
+		}
+		
+		else if (stmtType == StmtType.WHILE) {
+			
+			for (int i = 0; i < body1.size(); i++) {
+				
+				retVars.addAll(body1.get(i).GetDefVarsRecur(withPosition));
+				
+			}
+			
+		}
+		
+		// Else return empty list
+		else {
+			
+			// Add nothing
+			
+		}
+		
+		return retVars;
+		
+	}
+	
+	/**
+	 * Get the variables used in this statement, without including sub statements
 	 * @return a list of variables used in this statement
 	 */
 	// FIXME: What happens if variables are defined in statements inside ITE or WHILE
-	public List<String> GetUseVars() {
+	public List<String> GetUseVars(boolean withPosition) {
 		
-		List<String> varList = new ArrayList<String>();
+		List<String> retVars = new ArrayList<String>();
 		
 		// If it's an assignment, add every variable on the right side of the equation
 		if (stmtType == StmtType.ASSIGN) {
 			
-			varList.addAll(exprs.get(1).GetVarsFromExpr());
+			retVars.addAll(exprs.get(1).GetVarsFromExpr(withPosition));
 			
 		}
 		
@@ -377,7 +433,7 @@ public class Stmt {
 			
 			for (int i = 0; i < exprs.size(); i++) {
 				
-				varList.addAll(exprs.get(i).GetVarsFromExpr());
+				retVars.addAll(exprs.get(i).GetVarsFromExpr(withPosition));
 				
 			}
 				
@@ -386,26 +442,101 @@ public class Stmt {
 		// If it's an ITE, add every variable used in the branching condition
 		else if (stmtType == StmtType.ITE) {
 			
-			varList.addAll(exprs.get(0).GetVarsFromExpr());
+			retVars.addAll(exprs.get(0).GetVarsFromExpr(withPosition));
 			
 		}
 		
 		// If it's an ITE, add every variable used in the looping condition
 		else if (stmtType == StmtType.WHILE) {
 			
-			varList.addAll(exprs.get(0).GetVarsFromExpr());
+			retVars.addAll(exprs.get(0).GetVarsFromExpr(withPosition));
 			
 		}
 		
+		// Else return empty list
 		else {
 			
-			return null;
+			// Add nothing
 			
 		}
 		
-		return varList;
+		return retVars;
 		
 	}
+	
+	/**
+	 * Get the variables used in this statement, including sub statements
+	 * @return a list of variables used in this statement
+	 */
+	// FIXME: What happens if variables are defined in statements inside ITE or WHILE
+	public List<String> GetUseVarsRecur(boolean withPosition) {
+		
+		List<String> retVars = new ArrayList<String>();
+		
+		// If it's an assignment, add every variable on the right side of the equation
+		if (stmtType == StmtType.ASSIGN) {
+			
+			retVars.addAll(exprs.get(1).GetVarsFromExpr(withPosition));
+			
+		}
+		
+		// If it's an function, add every variable used as parameters
+		else if (stmtType == StmtType.FUNC) {
+			
+			for (int i = 0; i < exprs.size(); i++) {
+				
+				retVars.addAll(exprs.get(i).GetVarsFromExpr(withPosition));
+				
+			}
+				
+		}
+		
+		// If it's an ITE, add every variable used in the branching condition
+		else if (stmtType == StmtType.ITE) {
+			
+			retVars.addAll(exprs.get(0).GetVarsFromExpr(withPosition));
+			
+			// Add every variable inside "then"
+			for (int i = 0; i < body1.size(); i++) {
+				
+				retVars.addAll(body1.get(i).GetUseVarsRecur(withPosition));
+				
+			}
+			
+			// Add everything inside "else"
+			for (int i = 0; i < body2.size(); i++) {
+				
+				retVars.addAll(body2.get(i).GetUseVarsRecur(withPosition));
+				
+			}
+			
+		}
+		
+		// If it's an ITE, add every variable used in the looping condition
+		else if (stmtType == StmtType.WHILE) {
+			
+			retVars.addAll(exprs.get(0).GetVarsFromExpr(withPosition));
+			
+			// Add every variable inside the loop
+			for (int i = 0; i < body1.size(); i++) {
+				
+				retVars.addAll(body1.get(i).GetUseVarsRecur(withPosition));
+				
+			}
+			
+		}
+		
+		// Else return empty list
+		else {
+			
+			// Add nothing
+			
+		}
+		
+		return retVars;
+		
+	}
+	
 	
 	public List<Stmt> GetAllAssignStmt() {
 		
@@ -460,6 +591,9 @@ public class Stmt {
 	 * @param tag Target slice tag
 	 * @throws Exception When targetVars is null
 	 */
+	
+	// [DEBUG]
+	// [FIXME] underconstruction
 	public void BackwardSlice(List<String> targetVars, int tag) throws Exception {
 		
 		if (targetVars == null) {
@@ -471,7 +605,7 @@ public class Stmt {
 		// If it's an assignment
 		if (stmtType == StmtType.ASSIGN) {
 			
-			String assignedVar = exprs.get(0).GetVarsFromExpr().get(0);
+			String assignedVar = exprs.get(0).GetVarsFromExpr(false).get(0);
 			// If it assigns a variable in the target variable list
 			if (targetVars.contains(assignedVar)) {
 				
@@ -482,7 +616,7 @@ public class Stmt {
 				targetVars.remove(assignedVar);
 				
 				// Add the variables used in the assignment
-				targetVars.addAll(exprs.get(1).GetVarsFromExpr());
+				targetVars.addAll(exprs.get(1).GetVarsFromExpr(false));
 				
 			}
 			
@@ -515,7 +649,7 @@ public class Stmt {
 		else if (stmtType == StmtType.ITE) {
 			
 			// Find all the target variables defined in the ITE
-			List<String> definedVars = this.getDefVars();
+			List<String> definedVars = this.GetDefVarsRecur(false);
 			List<String> definedTargeVars = new ArrayList<String>();
 			
 			
@@ -532,11 +666,82 @@ public class Stmt {
 			// If target variables are assigned in the ITE, then slice it, or else skip it
 			if (definedTargeVars.size() > 0) {
 				
-				
+				sliceTags.add(tag);
 				
 			}
 			
 		}
+		
+		// If it's an loop
+		// FIXME: skipping loop for the moment
+		else if (stmtType == StmtType.WHILE) {
+			
+		}
+		
+	}
+	
+	/**
+	 * Generate a formula from this statement
+	 * @return the formula of this statement
+	 */
+	public String toFormula() {
+		
+		String retString = "";
+		
+		// In case of assignment
+		if (stmtType == StmtType.ASSIGN) {
+			
+			retString = "( = ( " + exprs.get(0).GetString(true) + " ) ( " + exprs.get(1).GetString(true) + " ))\n";
+			
+		}
+		
+		// In case of function
+		// [FIXME] Skipping function for the moment
+		else if (stmtType == StmtType.FUNC) {
+			
+			
+		}
+		
+		// In case of ITE
+		else if (stmtType == StmtType.ITE) {
+			
+			// Add the head of ITE
+			retString = retString.concat("( ite ");
+			
+			// Add the guard
+			retString = retString.concat("( " + exprs.get(0).GetString(true) + " )");
+			
+			// Add then
+			retString = retString.concat("( ");
+			for (int i = 0; i < body1.size(); i++) {
+				
+				retString = retString.concat(body1.get(i).toFormula());
+				
+			}
+			retString = retString.concat(" )");
+			
+			// Add else
+			retString = retString.concat("( ");
+			for (int i = 0; i < body2.size(); i++) {
+				
+				retString = retString.concat(body2.get(i).toFormula());
+				
+			}
+			retString = retString.concat(" )");
+			
+			// Add the end of ITE
+			retString = retString.concat(")\n");
+			
+		}
+		
+		// In case of loop
+		// [FIXME] Skipping loop for the moment
+		else if (stmtType == StmtType.WHILE) {
+			
+			
+		}
+		
+		return retString;
 		
 	}
 	

@@ -1,6 +1,7 @@
 package main;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.w3c.dom.Node;
 
 public class PhpFile {
@@ -75,6 +76,52 @@ public class PhpFile {
 		
 		return assignStmts;
 		
+	}
+	
+	public List<String> GetAllVars(boolean withPosition) {
+		
+		List<String> allVars = new ArrayList<String>();
+		
+		for (int i = 0; i < stmts.size(); i++) {
+			
+			allVars.addAll(stmts.get(i).GetDefVarsRecur(withPosition));
+			allVars.addAll(stmts.get(i).GetUseVarsRecur(withPosition));
+			
+		}
+		
+		return allVars;
+		
+	}
+	
+	public String toFormula() {
+		
+		String retString = "";
+		
+		List<String> vars = this.GetAllVars(true);
+		
+		for (int i = 0; i < vars.size(); i++) {
+			
+			retString = retString.concat("(declare-fun " + vars.get(i) + " () String)\n");
+			
+		}
+		
+		retString = retString.concat("\n");
+		
+		for (int i = 0; i < this.stmts.size(); i++) {
+			
+			String stmtFormula = stmts.get(i).toFormula();
+			if (!stmtFormula.isEmpty()) {
+				
+				retString = retString.concat("(assert ");
+				retString = retString.concat(stmtFormula);
+				retString = retString.concat(" )");
+			
+			}		
+		}
+		
+		retString = retString.concat("\n");
+		
+		return retString;
 	}
 	
 

@@ -12,6 +12,7 @@ public class Expr {
 	
 	private String top;
 	private List<Expr> subExprs;
+	private int position;
 
 	public ExprType exprType;
 	public ExprKind exprKind;
@@ -23,18 +24,42 @@ public class Expr {
 		
 	}
 	
-	public String toString() {
+	public String GetString(boolean withPosition) {
+		
+		String retString = "";
 		
 		// Case variable
 		if (exprKind == ExprKind.VAR) {
 			
 			if (top == "@") {
 				
-				return "$" + subExprs.get(0).top + "[" + subExprs.get(1).top + "]";
+				if (withPosition) {
+					
+					retString = subExprs.get(0).top + "*" + String.valueOf(subExprs.get(0).GetPosition()) + "@" + subExprs.get(1).top;
+					
+				}
 				
-			} else {
+				else {
+					
+					retString =  subExprs.get(0).top +  "@" + subExprs.get(1).top;
+				}
 				
-				return "$" + top;
+			}
+			
+			else {
+				
+				if (withPosition) {
+					
+					retString = top + "*" + String.valueOf(GetPosition());
+					
+				}
+				
+				else {
+					
+					retString = top;
+					
+				}
+					
 				
 			}
 			
@@ -43,26 +68,25 @@ public class Expr {
 		// Case constant
 		else if (exprKind == ExprKind.CONS) {
 			
-			return top;
+			retString = top;
 			
 		} 
 		
 		// Case composite
 		else if (exprKind == ExprKind.COMP) {
 			
-			String retString = "( ";
+			retString = "( ";
 			retString += top;
 			retString += " ";
 			
 			for(int i = 0; i < subExprs.size(); i++) {
 				
-				retString += subExprs.get(i).toString();
+				retString += subExprs.get(i).GetString(true);
 				retString += " ";
 				
 			}
 			
 			retString += ")";
-			return retString;
 			
 			
 		} 
@@ -71,9 +95,10 @@ public class Expr {
 		else {
 			
 			System.out.println("[ERROR]Unknown kind of expression");
-			return "";
 			
 		}
+		
+		return retString;
 		
 	}
 	
@@ -156,6 +181,18 @@ public class Expr {
 		
 	}
 	
+	public int GetPosition() {
+		
+		return position;
+		
+	}
+	
+	public void SetPosition(int newPosition) {
+		
+		position = newPosition;
+		
+	}
+	
 	
 	
 	private void ReadExprFromNode(Node exprNode) throws Exception{
@@ -217,6 +254,11 @@ public class Expr {
 			String varName = DocUtils.GetStringFromNode(nameStringNode);
 			SetTop(varName);
 			
+			Node positionNode = DocUtils.GetFirstChildWithName(
+					DocUtils.GetFirstChildWithName(exprNode, "attribute:startLine"), "scalar:int");
+			
+			int varPosition = DocUtils.GetIntFromNode(positionNode);
+			SetPosition(varPosition);
 			
 		} 
 		
@@ -261,7 +303,7 @@ public class Expr {
 		
 	}
 	
-	public List<String> GetVarsFromExpr() {
+	public List<String> GetVarsFromExpr(boolean withPosition) {
 		
 		List<String> varList = new ArrayList<String>();
 		
@@ -274,21 +316,7 @@ public class Expr {
 		// Add the variable if the expression is a variable
 		else if (exprKind == ExprKind.VAR) {
 			
-			// If it's an element from an array
-			if (top.equals("@")) {
-				
-				String varName = subExprs.get(0).top;
-				String idxName = subExprs.get(1).top;
-				varList.add(varName + "[" + idxName + "]");
-				
-			} 
-			
-			// If it's an simple variable
-			else {
-				
-				varList.add(top);
-				
-			}
+			varList.add(this.GetString(true));
 		}
 		
 		// Add the variable if the expression is composite
@@ -296,7 +324,7 @@ public class Expr {
 			
 			for (int i = 0; i < subExprs.size(); i++) {
 				
-				varList.addAll(subExprs.get(i).GetVarsFromExpr());
+				varList.addAll(subExprs.get(i).GetVarsFromExpr(withPosition));
 				
 			}
 			
@@ -305,7 +333,4 @@ public class Expr {
 		return varList;
 		
 	}
-	
-	
-
 }
