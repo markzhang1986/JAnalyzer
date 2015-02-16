@@ -1,7 +1,5 @@
 package main;
 
-import java.util.List;
-
 public class UDChain {
 	
 	private PhpFile file;
@@ -53,11 +51,6 @@ public class UDChain {
 	public Stmt GetTargetStmt() {
 		
 		return targetStmt;
-		
-	}
-	
-	private void BuildUDChain() {
-		
 		
 	}
 

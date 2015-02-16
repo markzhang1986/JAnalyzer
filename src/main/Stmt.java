@@ -691,7 +691,7 @@ public class Stmt {
 		// In case of assignment
 		if (stmtType == StmtType.ASSIGN) {
 			
-			retString = "( = ( " + exprs.get(0).GetString(true) + " ) ( " + exprs.get(1).GetString(true) + " ))\n";
+			retString = "(= (" + exprs.get(0).GetString(true) + " ) (" + exprs.get(1).GetString(true) + " ))\n";
 			
 		}
 		
@@ -706,28 +706,28 @@ public class Stmt {
 		else if (stmtType == StmtType.ITE) {
 			
 			// Add the head of ITE
-			retString = retString.concat("( ite ");
+			retString = retString.concat("\n\t(ite ");
 			
 			// Add the guard
-			retString = retString.concat("( " + exprs.get(0).GetString(true) + " )");
+			retString = retString.concat("(" + exprs.get(0).GetString(true) + ")\n");
 			
 			// Add then
-			retString = retString.concat("( ");
+			retString = retString.concat("\t\t(");
 			for (int i = 0; i < body1.size(); i++) {
 				
 				retString = retString.concat(body1.get(i).toFormula());
 				
 			}
-			retString = retString.concat(" )");
+			retString = retString.concat(")\n");
 			
 			// Add else
-			retString = retString.concat("( ");
+			retString = retString.concat("\t\t(");
 			for (int i = 0; i < body2.size(); i++) {
 				
 				retString = retString.concat(body2.get(i).toFormula());
 				
 			}
-			retString = retString.concat(" )");
+			retString = retString.concat(")\n");
 			
 			// Add the end of ITE
 			retString = retString.concat(")\n");

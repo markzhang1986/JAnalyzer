@@ -68,7 +68,7 @@ public class Expr {
 		// Case constant
 		else if (exprKind == ExprKind.CONS) {
 			
-			retString = top;
+			retString = "\"" + top + "\"";
 			
 		} 
 		
@@ -265,7 +265,7 @@ public class Expr {
 		// Case Binary Equation
 		else if (exprNode.getNodeName().equals("node:Expr_BinaryOp_Equal")) {
 			
-			SetTop("==");
+			SetTop("=");
 			SetExprType(ExprType.BOOL);
 			SetExprKind(ExprKind.COMP);
 			

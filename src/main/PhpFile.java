@@ -93,7 +93,7 @@ public class PhpFile {
 		
 	}
 	
-	public String toFormula() {
+	public String toSmtLib() {
 		
 		String retString = "";
 		

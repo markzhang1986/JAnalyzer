@@ -1,0 +1,61 @@
+package main;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+public class VCGenerator {
+	
+	private PhpFile inputFile;
+	private String outputFileName;
+	
+	public VCGenerator(PhpFile newInputFile, String newOutputFileName) {
+		
+		inputFile = newInputFile;
+		outputFileName = newOutputFileName;
+		
+	}
+	
+	public PhpFile getInputFile() {
+		
+		return inputFile;
+		
+	}
+	
+	public void setInputFile(PhpFile newInputFile) {
+		
+		inputFile = newInputFile;
+		
+	}
+	
+	public String getOutputFileName() {
+		
+		return outputFileName;
+		
+	}
+	
+	public void setOutputFileName(String newOutputFileName) {
+		
+		outputFileName = newOutputFileName;
+		
+	}
+	
+	public void generate() throws IOException {
+		
+		// head of the smt file
+		BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
+		writer.write("(set-logic QF_S)\n");
+		
+		// generate program
+		
+		writer.write(inputFile.toSmtLib());
+		
+		// end of the smt file
+		writer.write("(check-sat)\n");
+		
+		writer.close();
+		
+	}
+
+}
