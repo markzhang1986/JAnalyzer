@@ -75,7 +75,7 @@ public class Expr {
 		// Case composite
 		else if (exprKind == ExprKind.COMP) {
 			
-			retString = "( ";
+			retString = "(";
 			retString += top;
 			retString += " ";
 			

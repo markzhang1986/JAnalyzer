@@ -46,6 +46,7 @@ public class VCGenerator {
 		// head of the smt file
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
 		writer.write("(set-logic QF_S)\n");
+		writer.write("(set-option :strings-exp true)\n");
 		
 		// generate program
 		

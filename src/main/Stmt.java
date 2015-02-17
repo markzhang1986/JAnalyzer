@@ -688,10 +688,16 @@ public class Stmt {
 		
 		String retString = "";
 		
-		// In case of assignment
-		if (stmtType == StmtType.ASSIGN) {
+		if (stmtType == StmtType.SKIP) {
 			
-			retString = "(= (" + exprs.get(0).GetString(true) + " ) (" + exprs.get(1).GetString(true) + " ))\n";
+			retString = " true";
+			
+		}
+		
+		// In case of assignment
+		else if (stmtType == StmtType.ASSIGN) {
+			
+			retString = "(= " + exprs.get(0).GetString(true) + "  " + exprs.get(1).GetString(true) + " )\n";
 			
 		}
 		
@@ -699,6 +705,7 @@ public class Stmt {
 		// [FIXME] Skipping function for the moment
 		else if (stmtType == StmtType.FUNC) {
 			
+			retString = " true";
 			
 		}
 		
@@ -709,25 +716,57 @@ public class Stmt {
 			retString = retString.concat("\n\t(ite ");
 			
 			// Add the guard
-			retString = retString.concat("(" + exprs.get(0).GetString(true) + ")\n");
+			retString = retString.concat(exprs.get(0).GetString(true) + "\n");
 			
 			// Add then
-			retString = retString.concat("\t\t(");
-			for (int i = 0; i < body1.size(); i++) {
+			retString = retString.concat("\t\t");
+			
+			if (body1.size() == 1) {
 				
-				retString = retString.concat(body1.get(i).toFormula());
+				retString = retString.concat(body1.get(0).toFormula());
 				
 			}
-			retString = retString.concat(")\n");
+			
+			else {
+				
+				retString = retString.concat(" (and ");
+				
+				for (int i = 0; i < body1.size(); i++) {
+					
+					retString = retString.concat(body1.get(i).toFormula());
+					
+				}
+				
+				retString = retString.concat(")\n");
+				
+			}
+
+			retString = retString.concat("\n");
 			
 			// Add else
-			retString = retString.concat("\t\t(");
-			for (int i = 0; i < body2.size(); i++) {
+			retString = retString.concat("\t\t");
+			
+			if (body2.size() == 1) {
 				
-				retString = retString.concat(body2.get(i).toFormula());
+				retString = retString.concat(body2.get(0).toFormula());
 				
 			}
-			retString = retString.concat(")\n");
+			
+			else {
+				
+				retString = retString.concat(" (and ");
+				
+				for (int i = 0; i < body2.size(); i++) {
+					
+					retString = retString.concat(body2.get(i).toFormula());
+					
+				}
+				
+				retString = retString.concat(")\n");
+				
+			}
+
+			retString = retString.concat("\n");
 			
 			// Add the end of ITE
 			retString = retString.concat(")\n");
@@ -738,6 +777,7 @@ public class Stmt {
 		// [FIXME] Skipping loop for the moment
 		else if (stmtType == StmtType.WHILE) {
 			
+			retString = " true";
 			
 		}
 		

@@ -109,12 +109,12 @@ public class PhpFile {
 		
 		for (int i = 0; i < this.stmts.size(); i++) {
 			
-			String stmtFormula = stmts.get(i).toFormula();
-			if (!stmtFormula.isEmpty()) {
+			Stmt stmt = stmts.get(i);
+			if (stmt.stmtType != StmtType.SKIP) {
 				
 				retString = retString.concat("(assert ");
-				retString = retString.concat(stmtFormula);
-				retString = retString.concat(" )");
+				retString = retString.concat(stmt.toFormula());
+				retString = retString.concat(" )\n");
 			
 			}		
 		}
