@@ -21,7 +21,7 @@ public class JAnalyzer {
 	    try {
 	    	 
 	    	// read the xml file
-	    	File xmlFile = new File("test_login.xml");
+	    	File xmlFile = new File("login_1.xml");
 	    	DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 	    	DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 	    	Document doc = dBuilder.parse(xmlFile);

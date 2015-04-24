@@ -1,27 +1,35 @@
 package main;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.w3c.dom.Node;
 
 public class PhpFile {
 	private List<Stmt> stmts;
+	public List<String> shadowVars;
+	
+	public Stmt StmtOfInterest;
 	
 	public PhpFile () {
 		
 		stmts = new ArrayList<Stmt>();
+		shadowVars = new ArrayList<String>();
 		
 	}
 	
 	public PhpFile (List<Stmt> new_stmts) {
 		
 		stmts = new_stmts;
+		shadowVars = new ArrayList<String>();
 		
 	}
 	
 	public PhpFile (Node root) throws Exception {
 		
 		stmts = new ArrayList<Stmt>();
+		shadowVars = new ArrayList<String>();
 		ReadFileFromRoot(root);
 		
 	}
@@ -45,7 +53,7 @@ public class PhpFile {
 	 */
 	private void ReadFileFromRoot (Node root) throws Exception {
 		
-		stmts = Stmt.ReadStmtsFromArray(root);
+		stmts = Stmt.ReadStmtsFromArray(root, this, null);
 		
 	}
 	
@@ -78,9 +86,9 @@ public class PhpFile {
 		
 	}
 	
-	public List<String> GetAllVars(boolean withPosition) {
+	public Set<String> GetAllVars(boolean withPosition) {
 		
-		List<String> allVars = new ArrayList<String>();
+		Set<String> allVars = new HashSet<String>();
 		
 		for (int i = 0; i < stmts.size(); i++) {
 			
@@ -93,19 +101,77 @@ public class PhpFile {
 		
 	}
 	
+	public List<String> GetAllDefVars(boolean withPosition) {
+		
+		List<String> allVars = new ArrayList<String>();
+		
+		for (int i = 0; i < stmts.size(); i++) {
+			
+			allVars.addAll(stmts.get(i).GetDefVarsRecur(withPosition));
+			
+		}
+		
+		return allVars;
+		
+	}
+	
+	public List<String> GetAllUseVars(boolean withPosition) {
+		
+		List<String> allVars = new ArrayList<String>();
+		
+		for (int i = 0; i < stmts.size(); i++) {
+			
+			allVars.addAll(stmts.get(i).GetUseVarsRecur(withPosition));
+			
+		}
+		
+		return allVars;
+		
+	}
+	
+	public Stmt GetPreStmtInterLayer(Stmt targetStmt) {
+		
+		if (targetStmt.preStmt != null ) {
+			
+			return targetStmt.preStmt;
+			
+		}
+		
+		if (targetStmt.parentStmt != null) {
+			
+			return GetPreStmtInterLayer(targetStmt.parentStmt);
+			
+		}
+		
+		return null;
+		
+	}
+	
 	public String toSmtLib() {
 		
 		String retString = "";
 		
-		List<String> vars = this.GetAllVars(true);
+		// Declare variables
 		
-		for (int i = 0; i < vars.size(); i++) {
+		Set<String> vars = this.GetAllVars(true);
+		
+		for (String var : vars) {
 			
-			retString = retString.concat("(declare-fun " + vars.get(i) + " () String)\n");
+			retString = retString.concat("(declare-fun " + var + " () String)\n");
+			
+		}
+		
+		// Declare shadow variables
+		
+		for (int i = 0; i < shadowVars.size(); i++) {
+			
+			retString = retString.concat("(declare-fun " + shadowVars.get(i) + " () String)\n");
 			
 		}
 		
 		retString = retString.concat("\n");
+		
+		// Formulate the program
 		
 		for (int i = 0; i < this.stmts.size(); i++) {
 			
@@ -120,6 +186,20 @@ public class PhpFile {
 		}
 		
 		retString = retString.concat("\n");
+		
+		// State the negation of the goal
+		
+		retString = retString.concat("(assert ");
+		
+		String pc = this.StmtOfInterest.GetPathConditionString();
+		
+		retString = retString.concat("(and ");
+		
+		retString = retString.concat(pc);
+		retString = retString.concat("##PUT YOUR GOAL HERE##");
+		
+		retString = retString.concat(" )");
+		retString = retString.concat(" )\n");
 		
 		return retString;
 	}

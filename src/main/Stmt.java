@@ -1,12 +1,17 @@
 package main;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import utils.DocUtils;
+import utils.GeneralUtils;
 
 public class Stmt {
 	
@@ -15,20 +20,37 @@ public class Stmt {
 	private List<Stmt> body2;
 	
 	public StmtType stmtType;
+	public PhpFile phpFile;
 	
-	// parent statement and the immediate previous sibling
+	// parent statement and the immediate previous and next sibling
 	public Stmt parentStmt;
 	public Stmt preStmt;
+	public Stmt nextStmt;
+	
+	public int startLine;
+	public int endLine;
+	public Map<String, Integer> assignMap;
 	
 	public List<Integer> sliceTags;
 	
-	public Stmt(Node stmtNode) throws Exception {
+	public Stmt(Node stmtNode, PhpFile file, Stmt newParentStmt, Stmt newPreStmt) throws Exception {
 		
 		exprs = new ArrayList<Expr>();
 		body1 = new ArrayList<Stmt>();
 		body1 = new ArrayList<Stmt>();
-		sliceTags = new ArrayList<Integer>();
 		
+		stmtType = StmtType.SKIP;
+		phpFile = file;
+		
+		startLine = -1;
+		endLine = -1;
+		
+		preStmt = newPreStmt;
+		parentStmt = newParentStmt;
+		
+		assignMap = new HashMap<String, Integer>();
+		
+		sliceTags = new ArrayList<Integer>();
 		ReadStmtFromNode(stmtNode);
 		
 	}
@@ -69,6 +91,12 @@ public class Stmt {
 				
 				newBody.get(i).preStmt = newBody.get(i - 1);
 				
+				if (preStmt != null) {
+					
+					preStmt.nextStmt = newBody.get(i);
+					
+				}
+				
 			}
 			
 		}
@@ -95,6 +123,12 @@ public class Stmt {
 			if (i > 0) {
 				
 				newBody.get(i).preStmt = newBody.get(i - 1);
+				
+				if (preStmt != null) {
+					
+					preStmt.nextStmt = newBody.get(i);
+					
+				}
 				
 			}
 			
@@ -152,6 +186,36 @@ public class Stmt {
 		default:
 		}
 		
+		// Print out the closest assignments
+		// [REMOVE]
+		
+		System.out.print("For line" + startLine);
+		
+		if (preStmt == null) {
+			
+			System.out.println(" preStmt is null");
+			
+		}
+		
+		else {
+			
+			System.out.println(" preStmt is line" + preStmt.startLine);
+			
+		}
+		
+		if (assignMap.isEmpty())
+			return;
+		
+		System.out.print("closest assignment:");
+			
+		for (String defVar: assignMap.keySet()) {
+				
+			System.out.print(defVar + "*" + assignMap.get(defVar) + ",");
+				
+		}
+		System.out.println("\n");
+		
+		
 	}
 	
 	/**
@@ -162,6 +226,28 @@ public class Stmt {
 	 */
 	private void ReadStmtFromNode (Node stmtNode) throws Exception {
 		
+		// Skipping lines
+		if (stmtNode.getNodeName().equals("#text")) {
+			
+			stmtType = StmtType.SKIP;
+			return;
+		}
+		
+		Node slNode = DocUtils.GetFirstChildWithName(
+				DocUtils.GetFirstChildWithName(stmtNode, "attribute:startLine"), "scalar:int");
+		Node elNode = DocUtils.GetFirstChildWithName(
+				DocUtils.GetFirstChildWithName(stmtNode, "attribute:endLine"), "scalar:int");
+		
+		startLine = DocUtils.GetIntFromNode(slNode);
+		endLine = DocUtils.GetIntFromNode(elNode);
+		
+		Stmt preStmtInterLayer = phpFile.GetPreStmtInterLayer(this);
+		
+		if (preStmtInterLayer != null) {
+			
+			GeneralUtils.CopySIHashMap(preStmtInterLayer.assignMap, assignMap);
+			
+		}
 		
 		// In case of assignment
 		if (stmtNode.getNodeName().equals("node:Expr_Assign")) {
@@ -170,21 +256,27 @@ public class Stmt {
 					DocUtils.GetFirstChildWithName(stmtNode, "subNode:var"),
 					"node:Expr_Variable");
 			
-			Expr targetVar = new Expr(varNode);
+			Expr targetVar = new Expr(varNode, this, true);
+			
+			if (targetVar.exprKind != ExprKind.VAR) {
+				
+				throw new Exception("The LHS of an assignment must be a variable.");
+				
+			}
 			
 			Node exprNode = DocUtils.GetFirstExprChild(
 					DocUtils.GetFirstChildWithName(stmtNode, "subNode:expr"));
 			
-			Expr targetExpr = new Expr(exprNode);
+			Expr targetExpr = new Expr(exprNode, this, false);
 			
 			// Return an statement with type ASSIGN and two Exprs
 			List<Expr> exprList = new ArrayList<Expr>();
 			exprList.add(targetVar);
 			exprList.add(targetExpr);
 			
-			// Load into the class
 			stmtType = StmtType.ASSIGN;
 			SetExprs(exprList);
+			assignMap.put(targetVar.GetString(false), startLine);
 				
 		}
 		
@@ -201,8 +293,6 @@ public class Stmt {
 		// in case of ITE
 		else if (stmtNode.getNodeName().equals("node:Stmt_If")) {
 			
-			
-			
 			// Debug information
 			if (JAnalyzer.DEBUG_MODE >= 10) {
 				NodeList printList = stmtNode.getChildNodes();
@@ -216,14 +306,14 @@ public class Stmt {
 			Node ifConditionNode = DocUtils.GetFirstChildWithName(stmtNode, "subNode:cond");
 			Node ifConditionExprNode = DocUtils.GetFirstExprChild(ifConditionNode);
 			
-			Expr ifConditionExpr = new Expr(ifConditionExprNode);
+			Expr ifConditionExpr = new Expr(ifConditionExprNode, this, false);
 			List<Expr> ifConditionExprList = new ArrayList<Expr>();
 			ifConditionExprList.add(ifConditionExpr);
 			
 			//Get "then" statements
 			Node ifThenNode = DocUtils.GetFirstChildWithName(stmtNode, "subNode:stmts");
 			Node ifThenStmtsNode = DocUtils.GetFirstChildWithName(ifThenNode, "scalar:array");
-			List<Stmt> ifThenStmts = ReadStmtsFromArray(ifThenStmtsNode);
+			List<Stmt> ifThenStmts = ReadStmtsFromArray(ifThenStmtsNode, phpFile, this);
 			
 			//Get "elseif" list
 			Node ifElseIfNode = DocUtils.GetFirstChildWithName(stmtNode, "subNode:elseifs");
@@ -236,14 +326,14 @@ public class Stmt {
 			}
 			
 			// Get "else" statements
-			// ASSUMPTION: else have to levels subNode:else and Stmt_else
+			// ASSUMPTION: else have two levels subNode:else and Stmt_else
 			Node ifElseNode = DocUtils.GetFirstChildWithName(
 					DocUtils.GetFirstChildWithName(stmtNode, "subNode:else"), "node:Stmt_Else");
 			
 			Node ifElseStmtsNode = DocUtils.GetFirstChildWithName(ifElseNode, "subNode:stmts");
 			Node ifElseStmtsListNode = DocUtils.GetFirstChildWithName(ifElseStmtsNode, "scalar:array");
 			
-			List<Stmt> ifElseStmts = ReadStmtsFromArray(ifElseStmtsListNode);
+			List<Stmt> ifElseStmts = ReadStmtsFromArray(ifElseStmtsListNode, phpFile, this);
 			
 			
 			// Load into the class
@@ -252,12 +342,39 @@ public class Stmt {
 			SetBody1(ifThenStmts);
 			SetBody2(ifElseStmts);
 			
+			// Create new variables to store the new values for each variable re-assigned in the ITE, the new variable will be evaluated in "toFormula"
+			//[FIXME] only handling the case when both branches assigned the same variables
+			Set<String> defVars = new HashSet<String>();
+			
+			for (int i = 0; i < body1.size(); i++) {
+				
+				defVars.addAll(body1.get(i).GetDefVars(false));
+				
+			}
+			
+			for (int i = 0; i < body2.size(); i++) {
+				
+				defVars.addAll(body2.get(i).GetDefVars(false));
+				
+			}
+			
+			if (!defVars.isEmpty()) {
+				for (String defVar: defVars) {
+					
+					assignMap.put(defVar, (-1) * startLine);
+					phpFile.shadowVars.add(defVar + "*" + (-1) * startLine);
+				
+				}
+			}
+			
+			
 		}
 		
 		// in case of while loop
 		// FIXME
 		else if (stmtNode.getNodeName().equals("node:Stmt_While")) {
 			
+
 			System.out.println("\n[DEBUG]Current statement :" + stmtNode.getNodeName());
 			
 			stmtType = StmtType.SKIP;
@@ -269,14 +386,7 @@ public class Stmt {
 			
 			stmtType = StmtType.SKIP;
 		}
-		
-		// Skipping lines
-		else if (stmtNode.getNodeName().equals("#text")
-				|| stmtNode.getNodeName().equals("attribute:startLine")
-				|| stmtNode.getNodeName().equals("attribute:endLine")) {
-			
-			stmtType = StmtType.SKIP;
-		}
+
 	}
 	
 	
@@ -286,7 +396,7 @@ public class Stmt {
 	 * @return
 	 * @throws Exception
 	 */
-	public static List<Stmt> ReadStmtsFromArray (Node array) throws Exception {
+	public static List<Stmt> ReadStmtsFromArray (Node array, PhpFile file, Stmt parent) throws Exception {
 		
 		if (!array.getNodeName().equals("scalar:array")) {
 			
@@ -310,16 +420,34 @@ public class Stmt {
 
 			for (int i = 0; i < childList.getLength(); i++) {
 				
-				Stmt subStmt = new Stmt(childList.item(i));
+				// Skipping "#text"
+				
+				if (childList.item(i).getNodeName().equals("#text")) {
+					
+					continue;
+					
+				}
+				
+				Stmt preStmt = null;
+				
+				if (retStmts.size() >= 1) {
+					
+					preStmt = retStmts.get(retStmts.size() - 1);
+					
+				}
+				
+				Stmt subStmt = new Stmt(childList.item(i), file, parent, preStmt);
+				
+				if (retStmts.size() >= 1) {
+					
+					retStmts.get(retStmts.size() - 1).nextStmt = subStmt;
+					
+				}
 				
 				if ( subStmt != null) {
+					
 					retStmts.add(subStmt);
 					
-					if (i > 0) {
-						
-						subStmt.preStmt = retStmts.get(i - 1);
-						
-					}
 				}
 			}
 			
@@ -580,6 +708,273 @@ public class Stmt {
 		
 	}
 	
+	/**
+	 * Generate a formula from this statement
+	 * @return the formula of this statement
+	 */
+	public String toFormula() {
+		
+		String retString = "";
+		
+		if (stmtType == StmtType.SKIP) {
+			
+			retString = " true";
+			
+		}
+		
+		// In case of assignment
+		else if (stmtType == StmtType.ASSIGN) {
+			
+			retString = "(= " + exprs.get(0).GetString(true) + "  " + exprs.get(1).GetString(true) + " )\n";
+			
+			//[REMOVE]
+			phpFile.StmtOfInterest = this;
+			//[\REMOVE]
+			
+		}
+		
+		// In case of function
+		// [FIXME] Skipping function for the moment
+		else if (stmtType == StmtType.FUNC) {
+			
+			retString = " true";
+			
+		}
+		
+		// In case of ITE
+		else if (stmtType == StmtType.ITE) {
+			
+			// Prepare for the shadow variables
+			
+			// Find all the variables defined in the branches recursively
+			Set<String> thenDefVars = new HashSet<String>();
+			
+			for(Stmt stmt : body1) {
+				
+				List<String> defVars = stmt.GetDefVarsRecur(false);
+				thenDefVars.addAll(defVars);
+				
+			}
+			
+			Set<String> elseDefVars = new HashSet<String>();
+			for(Stmt stmt: body2) {
+				
+				List<String> defVars = stmt.GetDefVarsRecur(false);
+				elseDefVars.addAll(defVars);
+				
+			}
+			
+			Set<String> defVars = new HashSet<String>();
+			defVars.addAll(thenDefVars);
+			defVars.addAll(elseDefVars);
+			
+			// Find the last stmt before this ITE
+			Stmt lastPreStmt = phpFile.GetPreStmtInterLayer(this);
+			Stmt lastThenStmt = body1.get(body1.size() - 1);
+			Stmt lastElseStmt = body2.get(body2.size() - 1);
+			
+			// Finished preparing for the shadow variables
+
+			
+			// Add the head of ITE
+			retString = retString.concat("\n\t(ite ");
+			
+			// Add the guard
+			retString = retString.concat(exprs.get(0).GetString(true) + "\n");
+			
+			// Add then
+			retString = retString.concat("\t\t");
+			
+			if (body1.size() == 1 && defVars.isEmpty()) {
+				
+				retString = retString.concat(body1.get(0).toFormula());
+				
+			}
+			
+			else {
+				
+				retString = retString.concat(" (and ");
+				
+				// Add the program itself
+				
+				for (int i = 0; i < body1.size(); i++) {
+					
+					retString = retString.concat(body1.get(i).toFormula());
+					
+				}
+				
+				for (String defVar : defVars) {
+					
+					// Give the shadow variable a new name
+					String shadowVar = defVar + "*" + (-1) * this.startLine;
+					
+					// If "then" branch reassigned the variable, make the connection with the state of the last statement in this branch
+					if (thenDefVars.contains(defVar)) {
+						
+						String concreteVar = defVar + "*" + lastThenStmt.assignMap.get(defVar);
+						String newLine = " (= " + shadowVar + " " + concreteVar + ") ";
+						retString = retString.concat(newLine);
+						
+					}
+					
+					// If "then" branch didn't reassign the variable, make the connection with the state of closest previous statement of ITE
+					else {
+						
+						if (lastPreStmt != null) {
+							
+							if (lastPreStmt.assignMap.containsKey(defVar)) {
+								
+								String concreteVar = defVar + "*" + lastPreStmt.assignMap.get(defVar);
+								String newLine = " (= " + shadowVar + " " + concreteVar + ") ";
+								retString = retString.concat(newLine);
+							}
+						}
+						
+					}
+					
+				}
+				
+				retString = retString.concat(")\n");
+				
+			}
+
+			retString = retString.concat("\n");
+			
+			// Add else
+			retString = retString.concat("\t\t");
+			
+			if (body2.size() == 1 && defVars.isEmpty()) {
+				
+				retString = retString.concat(body2.get(0).toFormula());
+				
+			}
+			
+			else {
+				
+				retString = retString.concat(" (and ");
+				
+				for (int i = 0; i < body2.size(); i++) {
+					
+					retString = retString.concat(body2.get(i).toFormula());
+					
+				}
+				
+				// Add the evaluation of shadow variables
+				
+				for (String defVar : defVars) {
+					
+					// Give the shadow variable a new name
+					String shadowVar = defVar + "*" + (-1) * this.startLine;
+					
+					// If "else" branch reassigned the variable, make the connection with the state of the last statement in this branch
+					if (elseDefVars.contains(defVar)) {
+						
+						String concreteVar = defVar + "*" + lastElseStmt.assignMap.get(defVar);
+						String newLine = " (= " + shadowVar + " " + concreteVar + ") ";
+						retString = retString.concat(newLine);
+						
+					}
+					
+					// If "else" branch didn't reassign the variable, make the connection with the state of closest previous statement of ITE
+					else {
+						
+						if (lastPreStmt != null) {
+							
+							if (lastPreStmt.assignMap.containsKey(defVar)) {
+								
+								String concreteVar = defVar + "*" + lastPreStmt.assignMap.get(defVar);
+								String newLine = " (= " + shadowVar + " " + concreteVar + ") ";
+								retString = retString.concat(newLine);
+							}
+						}
+						
+					}
+					
+				}
+				
+				retString = retString.concat(")\n");
+				
+			}
+
+			retString = retString.concat("\n");
+			
+			// Add the end of ITE
+			retString = retString.concat(")\n");
+			
+			
+			
+		}
+		
+		// In case of loop
+		else if (stmtType == StmtType.WHILE) {
+			
+			retString = " true";
+			
+		}
+		
+		return retString;
+		
+	}
+	
+	/**
+	 * Get the path condition it has to satisfy to reach this statement
+	 * @return The path condition
+	 */
+	public String GetPathConditionString() {
+		
+		List<String> pcList = GetPathConditionStringList();
+		if (pcList.isEmpty()) {
+			
+			return "true";
+			
+		}
+		
+		else {
+			
+			String retString = "(and ";
+			for (String pc: pcList) {
+				
+				retString += pc + " ";
+				
+			}
+			retString += ")";
+			return retString;
+			
+		}
+		
+		
+	}
+	
+	/**
+	 * Get the list of path condition it has to satisfy to reach this statement
+	 * @return the path condition list
+	 */
+	public List<String> GetPathConditionStringList() {
+		
+		if (this.parentStmt == null) {
+			
+			return new ArrayList<String>();
+			
+		}
+		
+		else if (parentStmt.stmtType != StmtType.ITE) {
+			
+			return parentStmt.GetPathConditionStringList();
+			
+		}
+		
+		// If parent statement is not null and it's an ITE
+		else {
+			
+			List<String> retList = parentStmt.GetPathConditionStringList();
+			retList.add(parentStmt.exprs.get(0).GetString(true));
+			return retList;
+			
+		}
+		
+		
+	}
+	
 	/////////////////////////////////////////
 	//
 	// Program Slicing
@@ -680,110 +1075,6 @@ public class Stmt {
 		
 	}
 	
-	/**
-	 * Generate a formula from this statement
-	 * @return the formula of this statement
-	 */
-	public String toFormula() {
-		
-		String retString = "";
-		
-		if (stmtType == StmtType.SKIP) {
-			
-			retString = " true";
-			
-		}
-		
-		// In case of assignment
-		else if (stmtType == StmtType.ASSIGN) {
-			
-			retString = "(= " + exprs.get(0).GetString(true) + "  " + exprs.get(1).GetString(true) + " )\n";
-			
-		}
-		
-		// In case of function
-		// [FIXME] Skipping function for the moment
-		else if (stmtType == StmtType.FUNC) {
-			
-			retString = " true";
-			
-		}
-		
-		// In case of ITE
-		else if (stmtType == StmtType.ITE) {
-			
-			// Add the head of ITE
-			retString = retString.concat("\n\t(ite ");
-			
-			// Add the guard
-			retString = retString.concat(exprs.get(0).GetString(true) + "\n");
-			
-			// Add then
-			retString = retString.concat("\t\t");
-			
-			if (body1.size() == 1) {
-				
-				retString = retString.concat(body1.get(0).toFormula());
-				
-			}
-			
-			else {
-				
-				retString = retString.concat(" (and ");
-				
-				for (int i = 0; i < body1.size(); i++) {
-					
-					retString = retString.concat(body1.get(i).toFormula());
-					
-				}
-				
-				retString = retString.concat(")\n");
-				
-			}
-
-			retString = retString.concat("\n");
-			
-			// Add else
-			retString = retString.concat("\t\t");
-			
-			if (body2.size() == 1) {
-				
-				retString = retString.concat(body2.get(0).toFormula());
-				
-			}
-			
-			else {
-				
-				retString = retString.concat(" (and ");
-				
-				for (int i = 0; i < body2.size(); i++) {
-					
-					retString = retString.concat(body2.get(i).toFormula());
-					
-				}
-				
-				retString = retString.concat(")\n");
-				
-			}
-
-			retString = retString.concat("\n");
-			
-			// Add the end of ITE
-			retString = retString.concat(")\n");
-			
-		}
-		
-		// In case of loop
-		// [FIXME] Skipping loop for the moment
-		else if (stmtType == StmtType.WHILE) {
-			
-			retString = " true";
-			
-		}
-		
-		return retString;
-		
-	}
 	
 	
 }

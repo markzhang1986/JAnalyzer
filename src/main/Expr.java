@@ -17,12 +17,54 @@ public class Expr {
 	public ExprType exprType;
 	public ExprKind exprKind;
 	
-	public Expr(Node exprNode) throws Exception {
+	public Stmt parentStmt;
+	
+	public boolean assignedVar;
+	
+	public Expr(Node exprNode, Stmt pt, boolean av) throws Exception {
 		
 		subExprs = new ArrayList<Expr>();
+		SetPosition(-1);
+		
+		parentStmt = pt;
+		assignedVar = av;
+		
 		ReadExprFromNode(exprNode);
 		
 	}
+	
+	// Best not to use it
+	/*
+	public Expr(Expr expr) throws Exception{
+		
+		if (expr == null) {
+			
+			throw new Exception("Can't duplicate a null expression");
+			
+		}
+		
+		else {
+			
+			top = expr.top;
+			subExprs = new ArrayList<Expr>();
+			for (int i = 0; i < expr.subExprs.size(); i++) {
+				
+				Expr newSubExpr = new Expr(expr.subExprs.get(i));
+				subExprs.add(newSubExpr);
+				
+			}
+			SetPosition(expr.GetPosition());
+			
+			exprType = expr.exprType;
+			exprKind = expr.exprKind;
+			
+			parentStmt = expr.parentStmt;
+			assignedVar = expr.assignedVar;
+			
+			
+		}
+	}
+	*/
 	
 	public String GetString(boolean withPosition) {
 		
@@ -35,7 +77,7 @@ public class Expr {
 				
 				if (withPosition) {
 					
-					retString = subExprs.get(0).top + "*" + String.valueOf(subExprs.get(0).GetPosition()) + "@" + subExprs.get(1).top;
+					retString = subExprs.get(0).top + "@" + subExprs.get(1).top + "*" + String.valueOf(subExprs.get(0).GetPosition());
 					
 				}
 				
@@ -254,11 +296,32 @@ public class Expr {
 			String varName = DocUtils.GetStringFromNode(nameStringNode);
 			SetTop(varName);
 			
-			Node positionNode = DocUtils.GetFirstChildWithName(
-					DocUtils.GetFirstChildWithName(exprNode, "attribute:startLine"), "scalar:int");
+			System.out.print("For variable " + varName + ", parentStmt is " + parentStmt.startLine);
 			
-			int varPosition = DocUtils.GetIntFromNode(positionNode);
-			SetPosition(varPosition);
+			if (assignedVar) {
+				
+				SetPosition(parentStmt.startLine);
+				System.out.println(", it's assigned, and the position is " + GetPosition());
+				
+			}
+			
+			else {
+				
+				if (parentStmt.assignMap.containsKey(varName)) {
+					
+					SetPosition(parentStmt.assignMap.get(varName));
+					
+				}
+				
+				else {
+					
+					SetPosition(0);
+					
+				}
+				
+				System.out.println(", it's used, and the position is " + GetPosition());
+				
+			}
 			
 		} 
 		
@@ -270,10 +333,10 @@ public class Expr {
 			SetExprKind(ExprKind.COMP);
 			
 			Node exprLeftNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:left");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprLeftNode)));
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprLeftNode), parentStmt, assignedVar));
 			
 			Node exprRightNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:right");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprRightNode)));
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprRightNode), parentStmt, assignedVar));
 			
 		}
 		
@@ -286,10 +349,10 @@ public class Expr {
 			SetExprKind(ExprKind.VAR);
 			
 			Node exprVarNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:var");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprVarNode)));
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprVarNode), parentStmt, assignedVar));
 			
 			Node exprDimNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:dim");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprDimNode)));	
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprDimNode), parentStmt, assignedVar));	
 			
 		}
 		
@@ -316,7 +379,7 @@ public class Expr {
 		// Add the variable if the expression is a variable
 		else if (exprKind == ExprKind.VAR) {
 			
-			varList.add(this.GetString(true));
+			varList.add(this.GetString(withPosition));
 		}
 		
 		// Add the variable if the expression is composite
@@ -331,6 +394,17 @@ public class Expr {
 		}
 		
 		return varList;
+		
+	}
+	
+	// Get the position from a variable
+	public int GetPositionFromVar(String var) {
+		
+		String[] elements = var.split("\\*");
+		String varName = elements[0];
+		int useVarPosition = Integer.parseInt(elements[1]);
+		
+		return useVarPosition;
 		
 	}
 }
