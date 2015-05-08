@@ -7,5 +7,5 @@ package main;
  */
 
 public enum ExprKind {
-	VAR, CONS, COMP, UNKOWN
+	VAR, CONS, COMP, FUN, UNKOWN
 }

@@ -47,6 +47,7 @@ public class VCGenerator {
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outputFileName));
 		writer.write("(set-logic QF_S)\n");
 		writer.write("(set-option :strings-exp true)\n");
+		writer.write("(set-option :produce-models true)\n");
 		
 		// generate program
 		
@@ -54,6 +55,7 @@ public class VCGenerator {
 		
 		// end of the smt file
 		writer.write("(check-sat)\n");
+		writer.write("(get-model)\n");
 		
 		writer.close();
 		

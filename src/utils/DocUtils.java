@@ -95,7 +95,10 @@ public class DocUtils {
 			if (currentNode.getNodeName().equals("node:Scalar_String") ||
 					currentNode.getNodeName().equals("node:Expr_Variable") ||
 					currentNode.getNodeName().equals("node:Expr_BinaryOp_Equal") ||
-					currentNode.getNodeName().equals("node:Expr_ArrayDimFetch")) {
+					currentNode.getNodeName().equals("node:Expr_BinaryOp_Smaller") ||
+					currentNode.getNodeName().equals("node:Expr_ArrayDimFetch") ||
+					currentNode.getNodeName().equals("node:Expr_FuncCall") ||
+					currentNode.getNodeName().equals("node:Scalar_LNumber")) {
 				
 				return currentNode;
 				

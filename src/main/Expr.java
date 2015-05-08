@@ -17,8 +17,9 @@ public class Expr {
 	public ExprType exprType;
 	public ExprKind exprKind;
 	
+	// When assigning a variable(assignedVar), the position of the variable is its parent statement's startLine
+	// When using a variable(!assignedVar), the position is the same with its last assignment
 	public Stmt parentStmt;
-	
 	public boolean assignedVar;
 	
 	public Expr(Node exprNode, Stmt pt, boolean av) throws Exception {
@@ -110,7 +111,15 @@ public class Expr {
 		// Case constant
 		else if (exprKind == ExprKind.CONS) {
 			
-			retString = "\"" + top + "\"";
+			if (exprType == ExprType.STR) {
+				retString = "\"" + top + "\"";
+			}
+			
+			else {
+				
+				retString = top;
+				
+			}
 			
 		} 
 		
@@ -131,7 +140,28 @@ public class Expr {
 			retString += ")";
 			
 			
-		} 
+		}
+		
+		else if (exprKind == ExprKind.FUN) {
+			
+			retString = top;
+			retString += "(";
+			
+			for (int i = 0; i < subExprs.size(); i++) {
+				
+				if (i != 0) {
+					
+					retString += ",";
+					
+				}
+				
+				retString += subExprs.get(i).GetString(true);
+				
+			}
+			
+			retString += ")";
+			
+		}
 		
 		// Case unhandled
 		else {
@@ -273,6 +303,22 @@ public class Expr {
 			
 			
 		}
+		
+		// Case LNumber. No, I don't know what it means either.
+		// [FIXME] Only handling integer at the moment
+		else if (exprNode.getNodeName().equals("node:Scalar_LNumber")) {
+			
+			SetExprType(ExprType.INT);
+			SetExprKind(ExprKind.CONS);
+			
+			Node numValueNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:value");
+			Node valueNode = DocUtils.GetFirstChildWithName(numValueNode, "scalar:int");
+			
+			int num = DocUtils.GetIntFromNode(valueNode);
+			SetTop(String.format("%d", num));
+			
+		}
+		
 		// Case Variable
 		else if (exprNode.getNodeName().equals("node:Expr_Variable")) {
 			
@@ -340,6 +386,21 @@ public class Expr {
 			
 		}
 		
+		// Case Binary Smaller-Than
+		else if (exprNode.getNodeName().equals("node:Expr_BinaryOp_Smaller")) {
+					
+			SetTop("<");
+			SetExprType(ExprType.BOOL);
+			SetExprKind(ExprKind.COMP);
+					
+			Node exprLeftNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:left");
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprLeftNode), parentStmt, assignedVar));
+					
+			Node exprRightNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:right");
+			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprRightNode), parentStmt, assignedVar));
+					
+		}
+		
 		// Case array_dim
 		else if (exprNode.getNodeName().equals("node:Expr_ArrayDimFetch")) {
 			
@@ -353,6 +414,43 @@ public class Expr {
 			
 			Node exprDimNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:dim");
 			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprDimNode), parentStmt, assignedVar));	
+			
+		}
+		
+		// Case Function-Call
+		else if (exprNode.getNodeName().equals("node:Expr_FuncCall")) {
+			
+			SetExprType(ExprType.UNKOWN);
+			SetExprKind(ExprKind.FUN);
+			
+			// Get the function name
+			// [NOTE] For some reason, the name of the function is an array, I'm just looking at the first of the array for the moment
+			Node exprNamesArrayNode = DocUtils.GetFirstChildWithName(
+					DocUtils.GetFirstChildWithName(
+					DocUtils.GetFirstChildWithName(
+					DocUtils.GetFirstChildWithName(exprNode, "subNode:name"), 
+					"node:Name"), "subNode:parts"), "scalar:array");
+			
+			Node exprNameStrNode =  DocUtils.GetFirstChildWithName(exprNamesArrayNode, "scalar:string");		
+			SetTop(DocUtils.GetStringFromNode(exprNameStrNode));
+			
+			
+			// Get the list of arguments
+			Node exprArgsArrayNode = DocUtils.GetFirstChildWithName(
+					DocUtils.GetFirstChildWithName(exprNode, "subNode:args"), 
+					"scalar:array");
+			
+			List<Node> argsNodeArray = DocUtils.GetListofChildrenWithName(exprArgsArrayNode, "node:Arg");
+			for (int i = 0; i < argsNodeArray.size(); i++) {
+				
+				Node argNode = DocUtils.GetFirstChildWithName(argsNodeArray.get(i),"subNode:value");
+				
+				//[ASSUMPTION] subNode:value only have one child
+				Node argExprNode = DocUtils.GetFirstExprChild(argNode);
+				subExprs.add(new Expr(argExprNode, parentStmt, false));
+				
+			}
+			
 			
 		}
 		

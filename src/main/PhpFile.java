@@ -8,28 +8,28 @@ import org.w3c.dom.Node;
 
 public class PhpFile {
 	private List<Stmt> stmts;
-	public List<String> shadowVars;
+	public Set<String> shadowVars;
 	
 	public Stmt StmtOfInterest;
 	
 	public PhpFile () {
 		
 		stmts = new ArrayList<Stmt>();
-		shadowVars = new ArrayList<String>();
+		shadowVars = new HashSet<String>();
 		
 	}
 	
 	public PhpFile (List<Stmt> new_stmts) {
 		
 		stmts = new_stmts;
-		shadowVars = new ArrayList<String>();
+		shadowVars = new HashSet<String>();
 		
 	}
 	
 	public PhpFile (Node root) throws Exception {
 		
 		stmts = new ArrayList<Stmt>();
-		shadowVars = new ArrayList<String>();
+		shadowVars = new HashSet<String>();
 		ReadFileFromRoot(root);
 		
 	}
@@ -155,20 +155,16 @@ public class PhpFile {
 		
 		Set<String> vars = this.GetAllVars(true);
 		
+		// Add the shadow variable
+		vars.addAll(shadowVars);
+		
 		for (String var : vars) {
 			
 			retString = retString.concat("(declare-fun " + var + " () String)\n");
 			
 		}
 		
-		// Declare shadow variables
-		
-		for (int i = 0; i < shadowVars.size(); i++) {
-			
-			retString = retString.concat("(declare-fun " + shadowVars.get(i) + " () String)\n");
-			
-		}
-		
+
 		retString = retString.concat("\n");
 		
 		// Formulate the program

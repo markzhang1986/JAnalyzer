@@ -186,6 +186,7 @@ public class Stmt {
 		default:
 		}
 		
+		/*
 		// Print out the closest assignments
 		// [REMOVE]
 		
@@ -214,7 +215,7 @@ public class Stmt {
 				
 		}
 		System.out.println("\n");
-		
+		*/
 		
 	}
 	
@@ -343,18 +344,17 @@ public class Stmt {
 			SetBody2(ifElseStmts);
 			
 			// Create new variables to store the new values for each variable re-assigned in the ITE, the new variable will be evaluated in "toFormula"
-			//[FIXME] only handling the case when both branches assigned the same variables
 			Set<String> defVars = new HashSet<String>();
 			
 			for (int i = 0; i < body1.size(); i++) {
 				
-				defVars.addAll(body1.get(i).GetDefVars(false));
+				defVars.addAll(body1.get(i).GetDefVarsRecur(false));
 				
 			}
 			
 			for (int i = 0; i < body2.size(); i++) {
 				
-				defVars.addAll(body2.get(i).GetDefVars(false));
+				defVars.addAll(body2.get(i).GetDefVarsRecur(false));
 				
 			}
 			
