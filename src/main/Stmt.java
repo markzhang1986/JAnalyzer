@@ -15,7 +15,7 @@ import utils.GeneralUtils;
 
 public class Stmt {
 	
-	private List<Expr> exprs;
+	private List<PhpExpr> exprs;
 	private List<Stmt> body1;
 	private List<Stmt> body2;
 	
@@ -35,7 +35,7 @@ public class Stmt {
 	
 	public Stmt(Node stmtNode, PhpFile file, Stmt newParentStmt, Stmt newPreStmt) throws Exception {
 		
-		exprs = new ArrayList<Expr>();
+		exprs = new ArrayList<PhpExpr>();
 		body1 = new ArrayList<Stmt>();
 		body1 = new ArrayList<Stmt>();
 		
@@ -55,13 +55,13 @@ public class Stmt {
 		
 	}
 	
-	public List<Expr> GetExprs() {
+	public List<PhpExpr> GetExprs() {
 		
 		return exprs;
 		
 	}
 	
-	public void SetExprs(List<Expr> newExprs) throws Exception {
+	public void SetExprs(List<PhpExpr> newExprs) throws Exception {
 		
 		if (newExprs == null)
 			throw new Exception("Can't set expression to null.");
@@ -257,9 +257,9 @@ public class Stmt {
 					DocUtils.GetFirstChildWithName(stmtNode, "subNode:var"),
 					"node:Expr_Variable");
 			
-			Expr targetVar = new Expr(varNode, this, true);
+			PhpExpr targetVar = new PhpExpr(varNode, this, true);
 			
-			if (targetVar.exprKind != ExprKind.VAR) {
+			if (targetVar.exprKind != PhpExprKind.VAR) {
 				
 				throw new Exception("The LHS of an assignment must be a variable.");
 				
@@ -268,10 +268,10 @@ public class Stmt {
 			Node exprNode = DocUtils.GetFirstExprChild(
 					DocUtils.GetFirstChildWithName(stmtNode, "subNode:expr"));
 			
-			Expr targetExpr = new Expr(exprNode, this, false);
+			PhpExpr targetExpr = new PhpExpr(exprNode, this, false);
 			
 			// Return an statement with type ASSIGN and two Exprs
-			List<Expr> exprList = new ArrayList<Expr>();
+			List<PhpExpr> exprList = new ArrayList<PhpExpr>();
 			exprList.add(targetVar);
 			exprList.add(targetExpr);
 			
@@ -307,8 +307,8 @@ public class Stmt {
 			Node ifConditionNode = DocUtils.GetFirstChildWithName(stmtNode, "subNode:cond");
 			Node ifConditionExprNode = DocUtils.GetFirstExprChild(ifConditionNode);
 			
-			Expr ifConditionExpr = new Expr(ifConditionExprNode, this, false);
-			List<Expr> ifConditionExprList = new ArrayList<Expr>();
+			PhpExpr ifConditionExpr = new PhpExpr(ifConditionExprNode, this, false);
+			List<PhpExpr> ifConditionExprList = new ArrayList<PhpExpr>();
 			ifConditionExprList.add(ifConditionExpr);
 			
 			//Get "then" statements
@@ -989,6 +989,7 @@ public class Stmt {
 	
 	// [DEBUG]
 	// [FIXME] underconstruction
+	/*
 	public void BackwardSlice(List<String> targetVars, int tag) throws Exception {
 		
 		if (targetVars == null) {
@@ -1074,6 +1075,7 @@ public class Stmt {
 		}
 		
 	}
+	*/
 	
 	
 	

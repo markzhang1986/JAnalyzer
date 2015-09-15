@@ -6,6 +6,7 @@ import javax.xml.parsers.DocumentBuilder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import funlib.FunctionLibrary;
 import utils.DocUtils;
 
 import java.io.File;
@@ -13,10 +14,12 @@ import java.io.File;
 public class JAnalyzer {
 	
 	public static int DEBUG_MODE;
+	public static FunctionLibrary funlib;
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		
-		DEBUG_MODE = 9;
+		DEBUG_MODE = 0;
+		funlib = new FunctionLibrary();
 		
 	    try {
 	    	 
@@ -39,8 +42,6 @@ public class JAnalyzer {
 	    	VCGenerator generator = new VCGenerator(phpFile, "JAnalyzer.smt2");
 	    	generator.generate();
 	    	
-	    	
-	        
 	    } catch (Exception e) {
 	    	
 	    	e.printStackTrace();

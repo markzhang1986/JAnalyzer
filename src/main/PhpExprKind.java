@@ -6,6 +6,6 @@ package main;
  *
  */
 
-public enum ExprKind {
+public enum PhpExprKind {
 	VAR, CONS, COMP, FUN, UNKOWN
 }

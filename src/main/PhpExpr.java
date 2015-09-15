@@ -8,23 +8,23 @@ import org.w3c.dom.NodeList;
 
 import utils.DocUtils;
 
-public class Expr {
+public class PhpExpr {
 	
 	private String top;
-	private List<Expr> subExprs;
+	private List<PhpExpr> subExprs;
 	private int position;
 
-	public ExprType exprType;
-	public ExprKind exprKind;
+	public PhpExprType exprType;
+	public PhpExprKind exprKind;
 	
 	// When assigning a variable(assignedVar), the position of the variable is its parent statement's startLine
 	// When using a variable(!assignedVar), the position is the same with its last assignment
 	public Stmt parentStmt;
 	public boolean assignedVar;
 	
-	public Expr(Node exprNode, Stmt pt, boolean av) throws Exception {
+	public PhpExpr(Node exprNode, Stmt pt, boolean av) throws Exception {
 		
-		subExprs = new ArrayList<Expr>();
+		subExprs = new ArrayList<PhpExpr>();
 		SetPosition(-1);
 		
 		parentStmt = pt;
@@ -72,7 +72,7 @@ public class Expr {
 		String retString = "";
 		
 		// Case variable
-		if (exprKind == ExprKind.VAR) {
+		if (exprKind == PhpExprKind.VAR) {
 			
 			if (top == "@") {
 				
@@ -109,9 +109,9 @@ public class Expr {
 		}
 		
 		// Case constant
-		else if (exprKind == ExprKind.CONS) {
+		else if (exprKind == PhpExprKind.CONS) {
 			
-			if (exprType == ExprType.STR) {
+			if (exprType == PhpExprType.STR) {
 				retString = "\"" + top + "\"";
 			}
 			
@@ -124,7 +124,7 @@ public class Expr {
 		} 
 		
 		// Case composite
-		else if (exprKind == ExprKind.COMP) {
+		else if (exprKind == PhpExprKind.COMP) {
 			
 			retString = "(";
 			retString += top;
@@ -142,7 +142,7 @@ public class Expr {
 			
 		}
 		
-		else if (exprKind == ExprKind.FUN) {
+		else if (exprKind == PhpExprKind.FUN) {
 			
 			retString = top;
 			retString += "(";
@@ -181,19 +181,19 @@ public class Expr {
 		
 	}
 	
-	public List<Expr> GetSubExprs() {
+	public List<PhpExpr> GetSubExprs() {
 		
 		return subExprs;
 		
 	}
 	
-	public ExprType GetExprType() {
+	public PhpExprType GetExprType() {
 		
 		return exprType;
 		
 	}
 	
-	public ExprKind GetExprKind() {
+	public PhpExprKind GetExprKind() {
 		
 		return exprKind;
 		
@@ -213,7 +213,7 @@ public class Expr {
 		
 	}
 	
-	public void SetSubExprs(List<Expr> newSubExprs) {
+	public void SetSubExprs(List<PhpExpr> newSubExprs) {
 		
 		if (newSubExprs == null) {
 			
@@ -226,11 +226,11 @@ public class Expr {
 	}
 	
 	
-	public void SetExprType(ExprType newExprType) {
+	public void SetExprType(PhpExprType newExprType) {
 		
 		if (newExprType == null) {
 			
-			exprType = ExprType.UNKOWN;
+			exprType = PhpExprType.UNKOWN;
 			
 		} else {
 			
@@ -240,11 +240,11 @@ public class Expr {
 	}
 	
 	
-	public void SetExprKind(ExprKind newExprKind) {
+	public void SetExprKind(PhpExprKind newExprKind) {
 		
 		if (newExprKind == null) {
 			
-			exprKind = ExprKind.UNKOWN;
+			exprKind = PhpExprKind.UNKOWN;
 			
 		} else {
 			
@@ -269,12 +269,11 @@ public class Expr {
 	
 	private void ReadExprFromNode(Node exprNode) throws Exception{
 		
-		
 		// Case String
 		if (exprNode.getNodeName().equals("node:Scalar_String")) {
 			
-			SetExprType(ExprType.STR);
-			SetExprKind(ExprKind.CONS);
+			SetExprType(PhpExprType.STR);
+			SetExprKind(PhpExprKind.CONS);
 			
 			// Debug information
 			if (JAnalyzer.DEBUG_MODE >= 10) {
@@ -308,8 +307,8 @@ public class Expr {
 		// [FIXME] Only handling integer at the moment
 		else if (exprNode.getNodeName().equals("node:Scalar_LNumber")) {
 			
-			SetExprType(ExprType.INT);
-			SetExprKind(ExprKind.CONS);
+			SetExprType(PhpExprType.INT);
+			SetExprKind(PhpExprKind.CONS);
 			
 			Node numValueNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:value");
 			Node valueNode = DocUtils.GetFirstChildWithName(numValueNode, "scalar:int");
@@ -322,8 +321,8 @@ public class Expr {
 		// Case Variable
 		else if (exprNode.getNodeName().equals("node:Expr_Variable")) {
 			
-			SetExprType(ExprType.UNKOWN);
-			SetExprKind(ExprKind.VAR);
+			SetExprType(PhpExprType.UNKOWN);
+			SetExprKind(PhpExprKind.VAR);
 			
 			// Debug information
 			if (JAnalyzer.DEBUG_MODE >= 10) {
@@ -342,12 +341,16 @@ public class Expr {
 			String varName = DocUtils.GetStringFromNode(nameStringNode);
 			SetTop(varName);
 			
-			System.out.print("For variable " + varName + ", parentStmt is " + parentStmt.startLine);
+			if (JAnalyzer.DEBUG_MODE >= 10 ) {
+				System.out.print("For variable " + varName + ", parentStmt is " + parentStmt.startLine);
+			}
 			
 			if (assignedVar) {
 				
 				SetPosition(parentStmt.startLine);
-				System.out.println(", it's assigned, and the position is " + GetPosition());
+				if (JAnalyzer.DEBUG_MODE >= 10 ) {
+					System.out.println(", it's assigned, and the position is " + GetPosition());
+				}
 				
 			}
 			
@@ -365,7 +368,9 @@ public class Expr {
 					
 				}
 				
-				System.out.println(", it's used, and the position is " + GetPosition());
+				if (JAnalyzer.DEBUG_MODE >= 10 ) {
+					System.out.println(", it's used, and the position is " + GetPosition());
+				}
 				
 			}
 			
@@ -375,14 +380,14 @@ public class Expr {
 		else if (exprNode.getNodeName().equals("node:Expr_BinaryOp_Equal")) {
 			
 			SetTop("=");
-			SetExprType(ExprType.BOOL);
-			SetExprKind(ExprKind.COMP);
+			SetExprType(PhpExprType.BOOL);
+			SetExprKind(PhpExprKind.COMP);
 			
 			Node exprLeftNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:left");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprLeftNode), parentStmt, assignedVar));
+			subExprs.add(new PhpExpr(DocUtils.GetFirstExprChild(exprLeftNode), parentStmt, assignedVar));
 			
 			Node exprRightNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:right");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprRightNode), parentStmt, assignedVar));
+			subExprs.add(new PhpExpr(DocUtils.GetFirstExprChild(exprRightNode), parentStmt, assignedVar));
 			
 		}
 		
@@ -390,14 +395,14 @@ public class Expr {
 		else if (exprNode.getNodeName().equals("node:Expr_BinaryOp_Smaller")) {
 					
 			SetTop("<");
-			SetExprType(ExprType.BOOL);
-			SetExprKind(ExprKind.COMP);
+			SetExprType(PhpExprType.BOOL);
+			SetExprKind(PhpExprKind.COMP);
 					
 			Node exprLeftNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:left");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprLeftNode), parentStmt, assignedVar));
+			subExprs.add(new PhpExpr(DocUtils.GetFirstExprChild(exprLeftNode), parentStmt, assignedVar));
 					
 			Node exprRightNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:right");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprRightNode), parentStmt, assignedVar));
+			subExprs.add(new PhpExpr(DocUtils.GetFirstExprChild(exprRightNode), parentStmt, assignedVar));
 					
 		}
 		
@@ -406,22 +411,22 @@ public class Expr {
 			
 			// A@B get the item B in array A
 			SetTop("@");
-			SetExprType(ExprType.UNKOWN);
-			SetExprKind(ExprKind.VAR);
+			SetExprType(PhpExprType.UNKOWN);
+			SetExprKind(PhpExprKind.VAR);
 			
 			Node exprVarNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:var");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprVarNode), parentStmt, assignedVar));
+			subExprs.add(new PhpExpr(DocUtils.GetFirstExprChild(exprVarNode), parentStmt, assignedVar));
 			
 			Node exprDimNode = DocUtils.GetFirstChildWithName(exprNode, "subNode:dim");
-			subExprs.add(new Expr(DocUtils.GetFirstExprChild(exprDimNode), parentStmt, assignedVar));	
+			subExprs.add(new PhpExpr(DocUtils.GetFirstExprChild(exprDimNode), parentStmt, assignedVar));	
 			
 		}
 		
 		// Case Function-Call
 		else if (exprNode.getNodeName().equals("node:Expr_FuncCall")) {
 			
-			SetExprType(ExprType.UNKOWN);
-			SetExprKind(ExprKind.FUN);
+			SetExprType(PhpExprType.UNKOWN);
+			SetExprKind(PhpExprKind.FUN);
 			
 			// Get the function name
 			// [NOTE] For some reason, the name of the function is an array, I'm just looking at the first of the array for the moment
@@ -447,10 +452,11 @@ public class Expr {
 				
 				//[ASSUMPTION] subNode:value only have one child
 				Node argExprNode = DocUtils.GetFirstExprChild(argNode);
-				subExprs.add(new Expr(argExprNode, parentStmt, false));
+				subExprs.add(new PhpExpr(argExprNode, parentStmt, false));
 				
 			}
 			
+			System.out.println(this.top);
 			
 		}
 		
@@ -470,18 +476,18 @@ public class Expr {
 		
 		
 		// Add nothing if the expression is a constant
-		if (exprKind == ExprKind.CONS) {
+		if (exprKind == PhpExprKind.CONS) {
 			
 		}
 		
 		// Add the variable if the expression is a variable
-		else if (exprKind == ExprKind.VAR) {
+		else if (exprKind == PhpExprKind.VAR) {
 			
 			varList.add(this.GetString(withPosition));
 		}
 		
 		// Add the variable if the expression is composite
-		else if (exprKind == ExprKind.COMP) {
+		else if (exprKind == PhpExprKind.COMP) {
 			
 			for (int i = 0; i < subExprs.size(); i++) {
 				
@@ -499,7 +505,6 @@ public class Expr {
 	public int GetPositionFromVar(String var) {
 		
 		String[] elements = var.split("\\*");
-		String varName = elements[0];
 		int useVarPosition = Integer.parseInt(elements[1]);
 		
 		return useVarPosition;

@@ -62,8 +62,9 @@ public class PhpFile {
 	 */
 	public void printPhpFile() {
 		
-		//DEBUGGING
-		System.out.println("size of phpfile: " + stmts.size());
+		if (JAnalyzer.DEBUG_MODE >= 10) {
+			System.out.println("size of phpfile: " + stmts.size());
+		}
 		
 		for(int i = 0; i < stmts.size(); i++) {
 			

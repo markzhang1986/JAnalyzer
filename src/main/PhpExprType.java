@@ -1,5 +1,5 @@
 package main;
 
-public enum ExprType {
+public enum PhpExprType {
 	INT, BOOL, STR, UNKOWN
 }
