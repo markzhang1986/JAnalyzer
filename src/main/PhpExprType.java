@@ -1,5 +1,5 @@
 package main;
 
 public enum PhpExprType {
-	INT, BOOL, STR, UNKOWN
+	INT, BOOL, STR, UNKNOWN
 }

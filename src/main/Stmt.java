@@ -33,6 +33,9 @@ public class Stmt {
 	
 	public List<Integer> sliceTags;
 	
+	// only used when the statement is a loop
+	public List<PhpExpr> loopInvariants;
+	
 	public Stmt(Node stmtNode, PhpFile file, Stmt newParentStmt, Stmt newPreStmt) throws Exception {
 		
 		exprs = new ArrayList<PhpExpr>();
@@ -157,14 +160,14 @@ public class Stmt {
 			System.out.println("if (" + exprs.get(0).GetString(true) + ") {");
 			System.out.println();
 			
-			for (int i = 0; i < body1.size(); i++){
+			for (int i = 0; i < body1.size(); i++) {
 				System.out.printf("  ");
 				body1.get(i).printStmt();
 			}		
 			
 			System.out.println("} else {");
 
-			for (int i = 0; i < body2.size(); i++){
+			for (int i = 0; i < body2.size(); i++) {
 				System.out.printf("  ");
 				body2.get(i).printStmt();
 			}
@@ -172,11 +175,16 @@ public class Stmt {
 
 			break;
 			
-		case WHILE:
-			System.out.println("while (" + exprs.get(0).GetString(true) + ") {");
-			System.out.println();
+		case LOOP:
+			System.out.println("while (" + exprs.get(0).GetString(true) + ")");
 			
-			for (int i = 0; i < body1.size(); i++){
+			for (int i = 0; i < loopInvariants.size(); i++) {
+				System.out.printf("  invariant: ");
+				System.out.println(loopInvariants.get(i).GetString(false));
+			}
+			
+			System.out.println("{");
+			for (int i = 0; i < body1.size(); i++) {
 				System.out.printf("  ");
 				body1.get(i).printStmt();
 			}
@@ -246,7 +254,7 @@ public class Stmt {
 		
 		if (preStmtInterLayer != null) {
 			
-			GeneralUtils.CopySIHashMap(preStmtInterLayer.assignMap, assignMap);
+			GeneralUtils.CopyHashMap(preStmtInterLayer.assignMap, assignMap);
 			
 		}
 		
@@ -278,14 +286,29 @@ public class Stmt {
 			stmtType = StmtType.ASSIGN;
 			SetExprs(exprList);
 			assignMap.put(targetVar.GetString(false), startLine);
+			
+			// Set the type of the assigned variable to the type of the Expression
+			targetVar.SetExprType(targetExpr.GetExprType());
+			
+			// Add the variable and the type in the varType map
+			if (!phpFile.varsType.containsKey(targetVar.GetString(false))) {
 				
+				if (targetExpr.GetExprType() == PhpExprType.UNKNOWN) {
+					
+					throw new Exception("the type of the expression is unkown:\n" + targetExpr.GetString(true));
+					
+				}
+				
+				phpFile.varsType.put(targetVar.GetString(false), targetExpr.GetExprType());
+				
+			}
 		}
 		
 		// In case of function
 		// FIXME
 		else if (stmtNode.getNodeName().equals("FUNC")) {
 					
-			System.out.println("\n[DEBUG]Current statement :" + stmtNode.getNodeName());
+			System.out.println("\nSkipping statement :" + stmtNode.getNodeName());
 			
 			stmtType = StmtType.SKIP;
 					
@@ -297,9 +320,9 @@ public class Stmt {
 			// Debug information
 			if (JAnalyzer.DEBUG_MODE >= 10) {
 				NodeList printList = stmtNode.getChildNodes();
-				System.out.println("\n[DEBUG]Stmt_If");
+				System.out.println("\nStmt_If");
 				for (int i = 0; i < printList.getLength(); i++) {
-					System.out.println("[DEBUG]   " + printList.item(i).getNodeName());
+					System.out.println(printList.item(i).getNodeName());
 				}			
 			}
 			
@@ -337,7 +360,7 @@ public class Stmt {
 			List<Stmt> ifElseStmts = ReadStmtsFromArray(ifElseStmtsListNode, phpFile, this);
 			
 			
-			// Load into the class
+			// Load into the object
 			stmtType = StmtType.ITE;
 			SetExprs(ifConditionExprList);
 			SetBody1(ifThenStmts);
@@ -371,13 +394,55 @@ public class Stmt {
 		}
 		
 		// in case of while loop
-		// FIXME
 		else if (stmtNode.getNodeName().equals("node:Stmt_While")) {
 			
-
-			System.out.println("\n[DEBUG]Current statement :" + stmtNode.getNodeName());
+			loopInvariants = new ArrayList<PhpExpr>();
 			
-			stmtType = StmtType.SKIP;
+			// Debug information
+			if (JAnalyzer.DEBUG_MODE >= 10) {
+				NodeList printList = stmtNode.getChildNodes();
+				System.out.println("\nStmt_While");
+				for (int i = 0; i < printList.getLength(); i++) {
+					System.out.println(printList.item(i).getNodeName());
+				}			
+			}
+			
+			// Get loop condition 
+			Node loopConditionNode = DocUtils.GetFirstChildWithName(stmtNode, "subNode:cond");
+			Node loopConditionExprNode = DocUtils.GetFirstExprChild(loopConditionNode);
+			
+			PhpExpr loopConditionExpr = new PhpExpr(loopConditionExprNode, this, false);
+			List<PhpExpr> loopConditionExprList = new ArrayList<PhpExpr>();
+			loopConditionExprList.add(loopConditionExpr);
+			
+			//Get loop body
+			Node bodyNode = DocUtils.GetFirstChildWithName(stmtNode, "subNode:stmts");
+			Node bodyArrayNode = DocUtils.GetFirstChildWithName(bodyNode, "scalar:array");
+			List<Stmt> bodyStmts = ReadStmtsFromArray(bodyArrayNode, phpFile, this);
+			
+			while (true) {
+				Stmt currentStmt = bodyStmts.get(0);
+				if (currentStmt.stmtType != StmtType.ASSIGN) {
+					break;
+				}
+				if (currentStmt.exprs.get(0).exprKind != PhpExprKind.VAR) {
+					break;
+				}
+				if (currentStmt.exprs.get(0).GetTop().compareTo("invariant") != 0) {
+					break;
+				}
+				
+				PhpExpr invExpr = GeneralUtils.parseStringToPhpExpr(currentStmt.exprs.get(1).GetTop(), this);
+				
+				loopInvariants.add(invExpr);
+
+				bodyStmts.remove(0);
+			}
+			
+			// Load into the object
+			stmtType = StmtType.LOOP;
+			SetExprs(loopConditionExprList);
+			SetBody1(bodyStmts);
 			
 		}
 		
@@ -411,9 +476,9 @@ public class Stmt {
 			// Debug information
 			if (JAnalyzer.DEBUG_MODE >= 10) {
 				
-				System.out.println("\n[DEBUG]scalar:array");
+				System.out.println("\nscalar:array");
 				for (int i = 0; i < childList.getLength(); i++) {
-					System.out.println("[DEBUG]   " + childList.item(i).getNodeName());
+					System.out.println(childList.item(i).getNodeName());
 				}
 				System.out.println("");
 			}
@@ -519,7 +584,7 @@ public class Stmt {
 			
 		}
 		
-		else if (stmtType == StmtType.WHILE) {
+		else if (stmtType == StmtType.LOOP) {
 			
 			for (int i = 0; i < body1.size(); i++) {
 				
@@ -575,7 +640,7 @@ public class Stmt {
 		}
 		
 		// If it's an ITE, add every variable used in the looping condition
-		else if (stmtType == StmtType.WHILE) {
+		else if (stmtType == StmtType.LOOP) {
 			
 			retVars.addAll(exprs.get(0).GetVarsFromExpr(withPosition));
 			
@@ -641,7 +706,7 @@ public class Stmt {
 		}
 		
 		// If it's an ITE, add every variable used in the looping condition
-		else if (stmtType == StmtType.WHILE) {
+		else if (stmtType == StmtType.LOOP) {
 			
 			retVars.addAll(exprs.get(0).GetVarsFromExpr(withPosition));
 			
@@ -666,7 +731,7 @@ public class Stmt {
 	}
 	
 	
-	public List<Stmt> GetAllAssignStmt() {
+	public List<Stmt> getAllAssignStmts() {
 		
 		List<Stmt> assignStmt = new ArrayList<Stmt>();
 		
@@ -681,24 +746,24 @@ public class Stmt {
 			
 			for (int i = 0; i < body1.size(); i++) {
 				
-				assignStmt.addAll(body1.get(i).GetAllAssignStmt());
+				assignStmt.addAll(body1.get(i).getAllAssignStmts());
 				
 			}
 			
 			for (int i = 0; i < body2.size(); i++) {
 				
-				assignStmt.addAll(body2.get(i).GetAllAssignStmt());
+				assignStmt.addAll(body2.get(i).getAllAssignStmts());
 				
 			}
 			
 			
 		}
 		
-		else if (stmtType == StmtType.WHILE) {
+		else if (stmtType == StmtType.LOOP) {
 			
 			for (int i = 0; i < body1.size(); i++) {
 				
-				assignStmt.addAll(body1.get(i).GetAllAssignStmt());
+				assignStmt.addAll(body1.get(i).getAllAssignStmts());
 				
 			}
 			
@@ -708,11 +773,50 @@ public class Stmt {
 		
 	}
 	
+	public List<Stmt> getAllLoopStmts() {
+		
+		List<Stmt> loopsStmt = new ArrayList<Stmt>();
+		
+		// If this is a loop statement;
+		// FIXME Not considering nested loop
+		if (stmtType == StmtType.LOOP) {
+			
+			loopsStmt.add(this);
+			
+		} 
+		
+		else if (stmtType == StmtType.ITE) {
+			
+			for (int i = 0; i < body1.size(); i++) {
+				
+				loopsStmt.addAll(body1.get(i).getAllLoopStmts());
+				
+			}
+			
+			for (int i = 0; i < body2.size(); i++) {
+				
+				loopsStmt.addAll(body2.get(i).getAllLoopStmts());
+				
+			}
+			
+			
+		}
+		
+		return loopsStmt;
+		
+	}
+	
 	/**
 	 * Generate a formula from this statement
 	 * @return the formula of this statement
 	 */
-	public String toFormula() {
+	public String toFormula(int start, int end) {
+		
+		if (startLine < start || startLine > end) {
+			
+			return "true";
+			
+		}
 		
 		String retString = "";
 		
@@ -727,9 +831,9 @@ public class Stmt {
 			
 			retString = "(= " + exprs.get(0).GetString(true) + "  " + exprs.get(1).GetString(true) + " )\n";
 			
-			//[REMOVE]
+			//[FIXME]
 			phpFile.StmtOfInterest = this;
-			//[\REMOVE]
+			//[\FIXME]
 			
 		}
 		
@@ -787,7 +891,7 @@ public class Stmt {
 			
 			if (body1.size() == 1 && defVars.isEmpty()) {
 				
-				retString = retString.concat(body1.get(0).toFormula());
+				retString = retString.concat(body1.get(0).toFormula(start, end));
 				
 			}
 			
@@ -799,7 +903,7 @@ public class Stmt {
 				
 				for (int i = 0; i < body1.size(); i++) {
 					
-					retString = retString.concat(body1.get(i).toFormula());
+					retString = retString.concat(body1.get(i).toFormula(start, end));
 					
 				}
 				
@@ -845,7 +949,7 @@ public class Stmt {
 			
 			if (body2.size() == 1 && defVars.isEmpty()) {
 				
-				retString = retString.concat(body2.get(0).toFormula());
+				retString = retString.concat(body2.get(0).toFormula(start, end));
 				
 			}
 			
@@ -855,7 +959,7 @@ public class Stmt {
 				
 				for (int i = 0; i < body2.size(); i++) {
 					
-					retString = retString.concat(body2.get(i).toFormula());
+					retString = retString.concat(body2.get(i).toFormula(start, end));
 					
 				}
 				
@@ -906,9 +1010,34 @@ public class Stmt {
 		}
 		
 		// In case of loop
-		else if (stmtType == StmtType.WHILE) {
+		else if (stmtType == StmtType.LOOP) {
 			
-			retString = " true";
+			if (loopInvariants.size() == 0) {
+				
+				retString = "true";
+				
+			}
+			else if (loopInvariants.size() == 1) {
+				
+				retString = loopInvariants.get(0).GetString(true);
+				
+			}
+			else {
+				
+				retString = retString.concat(" (and ");
+				
+				for (int i = 0; i < loopInvariants.size(); i++) {
+					
+					retString = retString.concat("(");
+					retString = retString.concat(loopInvariants.get(i).GetString(true));
+					retString = retString.concat(")");
+					
+				}
+				
+				retString = retString.concat(")");
+				
+			}
+			
 			
 		}
 		
@@ -967,7 +1096,17 @@ public class Stmt {
 		else {
 			
 			List<String> retList = parentStmt.GetPathConditionStringList();
-			retList.add(parentStmt.exprs.get(0).GetString(true));
+			
+			if (parentStmt.body1.contains(this)) {
+				
+				retList.add(parentStmt.exprs.get(0).GetString(true));
+				
+			} else if (parentStmt.body2.contains(this)) {
+				
+				retList.add("(not " + parentStmt.exprs.get(0).GetString(true) + ")");
+				
+			}
+			
 			return retList;
 			
 		}
@@ -987,7 +1126,6 @@ public class Stmt {
 	 * @throws Exception When targetVars is null
 	 */
 	
-	// [DEBUG]
 	// [FIXME] underconstruction
 	/*
 	public void BackwardSlice(List<String> targetVars, int tag) throws Exception {

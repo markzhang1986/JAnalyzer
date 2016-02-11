@@ -93,12 +93,16 @@ public class DocUtils {
 			
 			// Search for expression node
 			if (currentNode.getNodeName().equals("node:Scalar_String") ||
+					currentNode.getNodeName().equals("node:Expr_ArrayDimFetch") ||
+					currentNode.getNodeName().equals("node:Expr_FuncCall") ||
+					currentNode.getNodeName().equals("node:Scalar_LNumber") ||				
 					currentNode.getNodeName().equals("node:Expr_Variable") ||
 					currentNode.getNodeName().equals("node:Expr_BinaryOp_Equal") ||
 					currentNode.getNodeName().equals("node:Expr_BinaryOp_Smaller") ||
-					currentNode.getNodeName().equals("node:Expr_ArrayDimFetch") ||
-					currentNode.getNodeName().equals("node:Expr_FuncCall") ||
-					currentNode.getNodeName().equals("node:Scalar_LNumber")) {
+					currentNode.getNodeName().equals("node:Expr_BinaryOp_SmallerOrEqual") ||
+					currentNode.getNodeName().equals("node:Expr_BinaryOp_Greater") ||
+					currentNode.getNodeName().equals("node:Expr_BinaryOp_GreaterOrEqual") ||
+					currentNode.getNodeName().equals("node:Expr_BinaryOp_Plus")) {
 				
 				return currentNode;
 				
@@ -106,7 +110,7 @@ public class DocUtils {
 			
 		}
 		
-		throw new Exception("Target node doesn't contain expr");
+		throw new Exception("Target node " + targetNode.getNodeName() + " doesn't contain expr");
 		
 	}
 

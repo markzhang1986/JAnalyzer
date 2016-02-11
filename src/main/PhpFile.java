@@ -1,14 +1,19 @@
 package main;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.w3c.dom.Node;
 
+import utils.GeneralUtils;
+
 public class PhpFile {
 	private List<Stmt> stmts;
 	public Set<String> shadowVars;
+	public Map<String, PhpExprType> varsType;
 	
 	public Stmt StmtOfInterest;
 	
@@ -16,13 +21,7 @@ public class PhpFile {
 		
 		stmts = new ArrayList<Stmt>();
 		shadowVars = new HashSet<String>();
-		
-	}
-	
-	public PhpFile (List<Stmt> new_stmts) {
-		
-		stmts = new_stmts;
-		shadowVars = new HashSet<String>();
+		varsType = new HashMap<String, PhpExprType>();
 		
 	}
 	
@@ -30,6 +29,7 @@ public class PhpFile {
 		
 		stmts = new ArrayList<Stmt>();
 		shadowVars = new HashSet<String>();
+		varsType = new HashMap<String, PhpExprType>();
 		ReadFileFromRoot(root);
 		
 	}
@@ -42,6 +42,12 @@ public class PhpFile {
 		}
 		
 		stmts.add(newStmt);
+		
+	}
+	
+	public PhpExprType getVarType(String var) throws Exception {
+		
+		return varsType.get(GeneralUtils.getNameFromVar(var));
 		
 	}
 	
@@ -79,11 +85,25 @@ public class PhpFile {
 		
 		for (int i = 0; i < stmts.size(); i++) {
 			
-			assignStmts.addAll(stmts.get(i).GetAllAssignStmt());
+			assignStmts.addAll(stmts.get(i).getAllAssignStmts());
 			
 		}
 		
 		return assignStmts;
+		
+	}
+	
+	public List<Stmt> getAllLoopStmts() {
+		
+		List<Stmt> loopStmts = new ArrayList<Stmt>();
+		
+		for (int i = 0; i < stmts.size(); i++) {
+			
+			loopStmts.addAll(stmts.get(i).getAllLoopStmts());
+			
+		}
+		
+		return loopStmts;
 		
 	}
 	
@@ -148,7 +168,13 @@ public class PhpFile {
 		
 	}
 	
-	public String toSmtLib() {
+	// Output the php file into a smtlib format string, from line "start" to line "end".
+	// We and counting only on the "startLine" for each statement, for example, if a loop starts
+	// at line 10 and ends at line 20, we count this loop statement as at line 10. However, the 
+	// statements in the loop body has their position as well. For the same example, if "end = 15",
+	// The statements starts at 15 to 20 will not be output, even we know they belongs to the loop
+	// at line 10.
+	public String toSmtLib(int start, int end) throws Exception {
 		
 		String retString = "";
 		
@@ -161,7 +187,20 @@ public class PhpFile {
 		
 		for (String var : vars) {
 			
-			retString = retString.concat("(declare-fun " + var + " () String)\n");
+			switch(getVarType(var)) {
+			case BOOL:
+				retString = retString.concat("(declare-fun " + var + " () Bool)\n");
+				break;
+			case INT:
+				retString = retString.concat("(declare-fun " + var + " () Int)\n");
+				break;
+			case STR:
+				retString = retString.concat("(declare-fun " + var + " () String)\n");
+				break;
+			default:
+				retString = retString.concat("(declare-fun " + var + " () String)\n");
+				break;
+			}
 			
 		}
 		
@@ -173,10 +212,10 @@ public class PhpFile {
 		for (int i = 0; i < this.stmts.size(); i++) {
 			
 			Stmt stmt = stmts.get(i);
-			if (stmt.stmtType != StmtType.SKIP) {
+			if (stmt.stmtType != StmtType.SKIP && stmt.startLine >= start && stmt.startLine <= end) {
 				
 				retString = retString.concat("(assert ");
-				retString = retString.concat(stmt.toFormula());
+				retString = retString.concat(stmt.toFormula(start, end));
 				retString = retString.concat(" )\n");
 			
 			}		
@@ -185,7 +224,8 @@ public class PhpFile {
 		retString = retString.concat("\n");
 		
 		// State the negation of the goal
-		
+		// [DEBUG] Disabling property check for the moment
+		/*
 		retString = retString.concat("(assert ");
 		
 		String pc = this.StmtOfInterest.GetPathConditionString();
@@ -197,6 +237,7 @@ public class PhpFile {
 		
 		retString = retString.concat(" )");
 		retString = retString.concat(" )\n");
+		*/
 		
 		return retString;
 	}

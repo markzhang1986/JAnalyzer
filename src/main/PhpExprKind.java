@@ -7,5 +7,5 @@ package main;
  */
 
 public enum PhpExprKind {
-	VAR, CONS, COMP, FUN, UNKOWN
+	VAR, CONS, COMP, FUN, UNKNOWN
 }
